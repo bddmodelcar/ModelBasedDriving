@@ -1,0 +1,10 @@
+How to install ZED Camera Wrapper for ROS
+1. Download ZED SDK for TX1 (or TX2)
+2. Find downloaded .run file in Downloads folder and (if needed) make it executable using `chmod +x`
+3. Run it using `./ZED_SDK_LINUX_JTX1_JP...`
+4. Accept all installation options
+5. Follow other instruction for downloading and installing ZED ROS wrapper.
+6. Execute `catkin_make zed-ros-wrapper` in your catkin directory
+7. `source ./devel/setup.bash`
+
+
