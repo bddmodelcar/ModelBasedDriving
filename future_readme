@@ -8,3 +8,9 @@ How to install ZED Camera Wrapper for ROS
 7. `source ./devel/setup.bash`
 
 
+
+
+Helpful Tips:
+1. ROS's built-in `sensor_msgs` package defines messages for commonly used sensors. The ZED camera uses `Image.msg` message type when publishing images. Its implementation can be found using `roscd sensor_msgs/msg`
+
+

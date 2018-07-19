@@ -4,6 +4,7 @@ from autocomm_params import params
 
 controller = False # becomes the serial object
 
+# find Arduino
 def find_controller():
     acm_ports = [os.path.join('/dev', dev) for dev in os.listdir('/dev') if 'ttyACM' in p]
     for port in acm_ports:

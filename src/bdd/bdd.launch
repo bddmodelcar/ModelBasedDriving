@@ -1,0 +1,8 @@
+<launch>
+    <node name="car" pkg="bdd" type="car.py"/>
+
+    <!-- launch ZED camera using its ros wrapper -->
+    <include file="$(find zed_wrapper)/launch/zed.launch"/>
+
+    
+</launch>
