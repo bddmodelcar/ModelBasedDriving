@@ -1,13 +1,14 @@
 #!/usr/bin/env python
 import rospy
-from bdd_driver import camera, neural_network, controls_aggregator
-Camera = camera.Camera
+#from bdd_driver import camera, 
+from bdd_driver import neural_network, controls_aggregator
+#Camera = camera.Camera
 NeuralNetwork = neural_network.NeuralNetwork
 Aggregator = controls_aggregator.Aggregator
 from params import params
 import bdd.msg as BDDMsg
-from sensor_msgs.msg import Image
-from cv_bridge import CvBridge, CvBridgeError
+#from sensor_msgs.msg import Image
+#from cv_bridge import CvBridge, CvBridgeError
 from multiprocessing import Process
 
 """Main node
@@ -31,17 +32,17 @@ images to a ros topic, to which the
 neural network processes should subscribe
 """
 
-cv_bridge = CvBridge()
+#cv_bridge = CvBridge()
 
 def main():
     rospy.init_node('bdd_driver')
     rospy.logdebug('starting bdd driver node')
 
-    cam = Camera(camera_number=0, mem_type=camera.MemType.CPU)
-    if not cam.initialized:
-        rospy.logfatal('failed to connect to zed camera..exiting')
-        exit(1)
-    rospy.logdebug('camera initialized')
+    #cam = Camera(camera_number=0, mem_type=camera.MemType.CPU)
+    #if not cam.initialized:
+    #    rospy.logfatal('failed to connect to zed camera..exiting')
+    #    exit(1)
+    #rospy.logdebug('camera initialized')
 
     num_nets = len(params.model_info)
     net_info = params.model_info
@@ -53,17 +54,25 @@ def main():
         processes.append(p)
     agg = Aggregator(num_nets)
 
-    image_pub = rospy.Publisher('bdd/dual_image', BDDMsg.BDDDualImage, queue_size=0)
-    rate = rospy.Rate(cam.fps)
+    #image_pub = rospy.Publisher('bdd/dual_image', BDDMsg.BDDDualImage, queue_size=0)
+    #rate = rospy.Rate(cam.fps)
+
+    # subscribe to zed camera
+
+    # may want to put a rate+sleep in this loop to not read the same image 
+    # twice when subed to ZED camera
     while not rospy.is_shutdown():
-        success, image = cam.capture(display=False)
-        if success:
-            try:
-                ros_image = cv_bridge.cv2_to_imgmsg(image, "bgr8")
-                image_pub.publish(BDDMsg.BDDDualImage(combined_image=ros_image))
-            except CvBridgeError as e:
-                rospy.logdebug(e)
-        rate.sleep()
+	
+	img_sub = rospy.Subscriber('
+
+        #success, image = cam.capture(display=False)
+        #if success:
+        #    try:
+        #        ros_image = cv_bridge.cv2_to_imgmsg(image, "bgr8")
+        #        image_pub.publish(BDDMsg.BDDDualImage(combined_image=ros_image))
+        #    except CvBridgeError as e:
+        #        rospy.logdebug(e)
+        #rate.sleep()
 
     rospy.logdebug('waiting for ml subprocesses to exit')
     for p in processes:
