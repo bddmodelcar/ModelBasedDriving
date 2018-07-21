@@ -7,7 +7,6 @@ import bdd.msg as BDDMsg
 import bdd_car.arduino_utils as utils
 from params import params
 
-# TODO: Have the car subscribe to the NN output and utilize its values.
 
 class Car():
     def __init__():

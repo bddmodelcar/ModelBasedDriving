@@ -57,13 +57,10 @@ def main():
     #image_pub = rospy.Publisher('bdd/dual_image', BDDMsg.BDDDualImage, queue_size=0)
     #rate = rospy.Rate(cam.fps)
 
-    # subscribe to zed camera
 
-    # may want to put a rate+sleep in this loop to not read the same image 
-    # twice when subed to ZED camera
+    # nitz: may want to put a rate+sleep in this loop to not read the same image 
+    # nitz: twice when subed to ZED camera
     while not rospy.is_shutdown():
-	
-	img_sub = rospy.Subscriber('
 
         #success, image = cam.capture(display=False)
         #if success:

@@ -31,12 +31,14 @@ neural network processes should subscribe
 def main():
     rospy.init_node('bdd_driver')
     rospy.logdebug('starting bdd driver node')
+    pub = rospy.Publisher('car_data', 
 
     while not rospy.is_shutdown():
 	
-	img_sub = rospy.Subscriber("/zed/depth/depth_registered", sensor_msgs/Image, callback())
+	rospy.Subscriber('/zed/depth/depth_registered', sensor_msgs/Image, callback())
 
 def callback(data):
+    rospy.
     # Give data to preprocessing class to add new image to queue of 10 images
     # run nueral network
     # publish NN output to rostopic
