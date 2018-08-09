@@ -3,6 +3,10 @@
 
     <!-- launch ZED camera using its ros wrapper -->
     <include file="$(find zed_wrapper)/launch/zed.launch"/>
+    
+    <!-- launch car node -->
+    <!-- launch driver node -->
+    <!-- launch nn_runner node -->
 
     
 </launch>

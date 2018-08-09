@@ -58,8 +58,6 @@ def main():
     #rate = rospy.Rate(cam.fps)
 
 
-    # nitz: may want to put a rate+sleep in this loop to not read the same image 
-    # nitz: twice when subed to ZED camera
     while not rospy.is_shutdown():
 
         #success, image = cam.capture(display=False)
