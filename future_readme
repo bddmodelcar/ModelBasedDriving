@@ -9,8 +9,24 @@ How to install ZED Camera Wrapper for ROS
 
 
 
+Mandatory:
+1. Add to `.bashrc` the following: `export PYTHONPATH=$PYTHONPATH:/usr/lib/python2.7/dist-packages`
+in order to run the car_inputs.py node (probably it's needed for all nodes)
+2. In order to run nodes: make nodes (.py files which are nodes) executeable using `chmod +x <file_name>.py`and by adding this at the top of the .py file: `#!/usr/bin/env python`
+
+
 
 Helpful Tips:
-1. ROS's built-in `sensor_msgs` package defines messages for commonly used sensors. The ZED camera uses `Image.msg` message type when publishing images. Its implementation can be found using `roscd sensor_msgs/msg`
+1. *source devel/setup.bash*
+2. ROS's built-in `sensor_msgs` package defines messages for commonly used sensors. The ZED camera uses `Image.msg` message type when publishing images. Its implementation can be found using `roscd sensor_msgs/msg`
 
 
+
+TODO:
+1. Write file for user options and read from it in different files that use user options
+2. Write launch file
+3. Get everything to compile
+4. Maybe update ZED firmware, but need help to do so.
+    
+Progeress: Tried this: roslaunch zed_wrapper display.launch
+But it says yaml doesn't have attribute add_representer. Actually, does that make sense or should it be "function" instead of attribute? O.o gotta look into that.

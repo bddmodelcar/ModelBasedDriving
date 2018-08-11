@@ -1,6 +1,6 @@
 import os
 import serial
-from autocomm_params import params
+from params import params
 
 controller = False # becomes the serial object
 

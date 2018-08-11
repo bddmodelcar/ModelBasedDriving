@@ -5,9 +5,8 @@
   <description>The bdd model car software package</description>
 
   <!-- One maintainer tag required, multiple allowed, one person per tag -->
-  <!-- Example:  -->
-  <!-- <maintainer email="jane.doe@example.com">Jane Doe</maintainer> -->
   <maintainer email="mark64@berkeley.edu">mark</maintainer>
+  <maintainer email="nitzan.orr@berkeley.edu"> Nitzan Orr </maintainer>
 
 
   <!-- One license tag required, multiple allowed, one license per tag -->
@@ -53,8 +52,8 @@
   <build_depend>message_runtime</build_depend>
   <build_export_depend>rospy</build_export_depend>
   <exec_depend>rospy</exec_depend>
-  <exec_depend>python-opencv2</exec_depend>
-  <exec_depend>cv_bridge</exec_depend>
+  <!-- <exec_depend>python-opencv2</exec_depend> -->
+  <!-- <exec_depend>cv_bridge</exec_depend> -->
   <exec_depend>python-numpy</exec_depend>
   <exec_depend>message_runtime</exec_depend>
 
