@@ -1,16 +1,13 @@
 <launch>
 
-    <!-- launch ZED camera using its ros wrapper --> <!--
-    <include file="$(find zed_wrapper)/launch/zed.launch"/> 
-    -->
+    <!-- launch ZED camera using its ros wrapper --> 
+    <include file="$(find zed_wrapper)/launch/zed.launch"/>
+    
     
     <!-- launch car control inputs node -->
-    <node name="car_inputs" pkg="bdd" type="car_inputs.py"/>
+    <!-- <node name="car_inputs" pkg="bdd" type="car_inputs.py" output="screen"/> -->
     
     <!-- launch driver node -->
-    <node name="new_driver" pkg="bdd" type="new_driver.py"/>
-    
-    <!-- launch nn_runner node -->
-    <node name="nn_runner" pkg="bdd" type="nn_runner.py"/>
+    <node name="new_driver" pkg="bdd" type="new_driver.py" output="screen"/>
 
 </launch>
