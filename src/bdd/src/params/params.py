@@ -7,7 +7,8 @@ direction_pwm_null = 21
 direction_pwm_gain = 3
 direction_pwm_min = 0
 direction_pwm_max = 4096
-baudrate = 19200
+# used to be 19200
+baudrate = 115200
 timeout = 1
 
 # driver.py

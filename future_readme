@@ -21,6 +21,7 @@ Helpful Tips:
 1. *source devel/setup.bash*
 2. ROS's built-in `sensor_msgs` package defines messages for commonly used sensors. The ZED camera uses `Image.msg` message type when publishing images. Its implementation can be found using `roscd sensor_msgs/msg`
 3. Settings for the ZED camera are found at zed.launch, and the launch file(s) it includes. Also be sure to read its READMEs which are at multiple places in its directory tree.
+4. When connecting the flash drive used for storing log files, it mounts itself at /media/nvidia/rosbags
 
 
 ***Before sourcing from devel/setup.bash: I import yaml and it gets imported from /usr/lib/python2.7/dist-packages/yaml/__init__.pyc. Then when I do yaml.representer, it says that it exists. But if I source setup.bash first, then it  sources yaml from /home/nvidia/ModelBasedDriving/devel/lib/python2.7/dist-packages/yaml/__init__.pyc'. Then when I do yaml.representer, it does NOT find it. So apparently the yaml package there is missing its modules for some reason, so I copy-pasted them in. We'll see how much of a solution that is (I was able to catkin_make + source setup.bash and it still works (for some reason...)). Not sure why ROS uses that version of yaml instead of the python2.7 in /usr/lib.***
@@ -28,18 +29,14 @@ Helpful Tips:
 
 
 TODO:
-0. Launch camera node and driver node. And see if they work :)
+0. Find out why car node doesn't seem to work
 1. Write file for user options and read from it in different files that use user options
-2. Install torch
-3. Get everything to compile
-4. Maybe update ZED firmware, but need help to do so.
-5. What conversion needs to be done on the image to use it in pytorch nn?
-6. How to make ZED use GPU? Some GPU ID in zed_camera.launch...
+2. Maybe update ZED firmware, but need help to do so.
+3. What conversion needs to be done on the image to use it in pytorch nn?
+4. How to make ZED use GPU? Some GPU ID in zed_camera.launch... (-1) should be good bc it selects best GPU. Make sure it's -1
+
+98. Note: i've changed the permissions of /media/nvidia/rosbags to allow writing to it (for log files)
 99. Remove BDDDualImage message type if not needed
 
 
-
-How to make this work with processes...
-When car data is received, start a new thread to run a NN using that data.
-But if a NN process is already running, then don't start a new process, (extra: but still record the new car data for future use). (TX has 4 cores btw).
 

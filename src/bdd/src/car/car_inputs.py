@@ -8,7 +8,7 @@ import arduino_utils as utils
 from params import params
 
 
-class Car():
+class CarControl():
     def __init__(self):
         if not self.init_hardware():
             print('failed to initialized car hardware')
@@ -16,12 +16,16 @@ class Car():
         self.speed = 0 # -1 = max speed back, 0 = stop, 1 = max speed forward
         self.direction = 0 # -1 = left, 0 = straight, 1 = right
         self.state = 0
+        rospy.init_node('carControl')
+        rospy.Subscriber('controls', BDDMsg.BDDControlsMsg, callback=self.controls_callback)
+        rospy.spin()
+        print('exiting bdd car node')
 
     def __del__(self):
         self.shutdown_hardware()
 
     def init_hardware(self):
-        utils.init()
+        return utils.init()
 
     def shutdown_hardware(self):
         utils.shutdown()
@@ -30,24 +34,17 @@ class Car():
         utils.write(speed=self.speed, direction=self.direction)
 
 
-def controls_callback(controls_msg):
-    car.speed = controls_msg.speed
-    car.direction = controls_msg.direction
-    car.state = controls_msg.state
-    car.update_output()
+    def controls_callback(self, controls_msg):
+        print('/\/\/\/\/GOT SUM INPUT!\/\/\/\/', controls_msg.speed, controls_msg.direction)
+        self.speed = controls_msg.speed
+        self.direction = controls_msg.direction
+        self.update_output()
     
-def car_inputs():
-    print('starting bdd car node')
-    rospy.init_node('car_inputs')
-    rospy.Subscriber('controls', BDDMsg.BDDControlsMsg, callback=controls_callback)
-    rospy.spin()
-    print('exiting bdd car node')
 
 if __name__ == '__main__':
     
     try:
-        car_inputs()
-        car = Car()
+        car = CarControl()
     except rospy.ROSInterruptException: 
         pass
         

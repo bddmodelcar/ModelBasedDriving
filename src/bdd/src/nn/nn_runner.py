@@ -66,8 +66,8 @@ def init_model():
     
     '''
     
-
-def input_from_driver(car_data, run_nn = False):
+# either run a NN or only record data
+def process_input(car_data, run_nn, return_value_q):
     # send new car_data to data_processor
     # new_queued_data = data_processor.add_new_data(car_data)
     
@@ -75,13 +75,13 @@ def input_from_driver(car_data, run_nn = False):
         print('fake running [NN]...') # or just sleep instead of a loop...
         time.sleep(1)
         
-    #
+        # run_model(new_queued_data)
+    
         print("ran NN")
-    return
-    #
+        return_value_q.put((100, 100))
+     
+    return None
     
-    
-    #    run_model(new_queued_data)
     
 
 def run_model(processed_data):

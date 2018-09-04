@@ -2,23 +2,26 @@ import os
 import serial
 from params import params
 
-controller = False # becomes the serial object
+controller = None # becomes the serial object
 
 # find Arduino
 def find_controller():
-    acm_ports = [os.path.join('/dev', dev) for dev in os.listdir('/dev') if 'ttyACM' in p]
+    print('finding controller')
+    acm_ports = [os.path.join('/dev', dev) for dev in os.listdir('/dev') if 'ttyACM' in dev]
     for port in acm_ports:
         try:
             ser = serial.Serial(port, baudrate=params.baudrate, timeout=params.timeout)
             for _ in xrange(100):
                 line = ser.readline()
+                print(_, line)
                 if 'mse' in line:
+                    print('found mse')
                     return ser
             ser.close()
         except:
             pass
     print('could not find motor controller')
-    return False
+    return None
 
 
 # speed is a floating point value between -1 and 1
@@ -36,9 +39,11 @@ def control_str(speed, direction):
 
 def init():
     controller = find_controller()
+    print('Controller:', controller)
     if controller:
         print('found motor controller')
         write(speed=0, direction=0)
+        return True
 
 def shutdown():
     if controller:

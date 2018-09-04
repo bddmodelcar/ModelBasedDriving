@@ -1,13 +1,14 @@
 #!/usr/bin/env python
 import rospy
 import bdd.msg as BDDMsg
-from multiprocessing import Process
+from multiprocessing import Process, Queue
+from Queue import Empty # Regular Queue, not multiprocessing's Queue
 from sensor_msgs.msg import Image
 
 # add parent of parent directory to path so files these files can be imported
 import os, sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
-from nn.nn_runner import init_model, input_from_driver
+from nn.nn_runner import init_model, process_input
 from params import params
 
 
@@ -39,6 +40,8 @@ neural network processes should subscribe
 class Driver():
 
     current_process = Process()
+    return_value_q = Queue()
+    
     #net = None
 
     def __init__(self):
@@ -58,38 +61,43 @@ class Driver():
     
     
     
-    
-    def cam_callback(self, data):
+    # invokes a neural network process if one is not currently running
+    # if one is running, then only send data for recording to be used next time a NN will run
+    def cam_callback(self, car_data):
 
-        print('~~ received image ~~')
+        #print('~~ received image ~~')
 
         # if no NN process running, start a new NN process
         if not Driver.current_process.is_alive():
-            print('-*-*-*-*STARTING NEW PROCESS*-*-*-*-')
-            Driver.current_process = Process(target = input_from_driver, args = (data, True))
+        
+            # Queue is used for only one tuple of data: (speed, direction)
+            #return_value_q = Queue()
+            
+            print('STARTING NEW PROCESS')
+            Driver.current_process = Process(target = process_input, args = (car_data, True, Driver.return_value_q))
             Driver.current_process.start()
+            Driver.current_process.join()
+            
+            try:
+                self.send_to_car(Driver.return_value_q.get(False))
+            except Empty:
+                print('queue is empty')
+                pass
             
         # else, don't start a new one, but record the new car data
         else:
-            print('... NOT starting another ...')
-            input_from_driver(data, False)
+            #print('... NOT starting another ...')
+            process_input(car_data, False, None)
             
-        
-        print
-        
-        #
-        #send_to_car(None) 
-        #    
 
 
 
-
-    # TODO: rename function since it's not a callback anymore
-    def send_to_car(self, data):
+    # publishes car controls on /controls topic
+    def send_to_car(self, nn_output):
 
         # TODO: Format the nn_output into steer and speed. Similar code to run_model in Network.py
-        speed = 0 #data.speed
-        direction = 0 #data.direction
+        speed = nn_output[0] #data.speed
+        direction = nn_output[1] #data.direction
         
         #TODO: make sure this works:
         Driver.control_pub.publish(BDDMsg.BDDControlsMsg(speed=speed, direction=direction))
