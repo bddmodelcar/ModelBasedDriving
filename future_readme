@@ -33,7 +33,8 @@ TODO:
 1. Write file for user options and read from it in different files that use user options
 2. Maybe update ZED firmware, but need help to do so.
 3. What conversion needs to be done on the image to use it in pytorch nn?
-4. How to make ZED use GPU? Some GPU ID in zed_camera.launch... (-1) should be good bc it selects best GPU. Make sure it's -1
+4. How to make ZED use GPU? Some GPU ID in zed_camera.launch. A: should be good bc it selects best GPU. Make sure it's -1
+5. Make sure the return data queue in new_driver doesn't become filled with old data. Maybe just create a new queue every time a NN is invoked
 
 98. Note: i've changed the permissions of /media/nvidia/rosbags to allow writing to it (for log files)
 99. Remove BDDDualImage message type if not needed

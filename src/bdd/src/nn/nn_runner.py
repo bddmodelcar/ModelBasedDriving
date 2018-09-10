@@ -1,8 +1,6 @@
 import rospy
 import bdd.msg as BDDMsg
-#import params # probably bad
 from sensor_msgs.msg import Image
-#import torch
 import time
 
 
@@ -31,8 +29,6 @@ image_callback:
 	-receives processed data and runs the model
 
 
-May be useful to know about spinning and callbacks (e.g. they say not to run long tasks in callback)
-https://answers.ros.org/question/53055/ros-callbacks-threads-and-spinning/
 """
 
 # from kzpy3.2/.../bair_car/nodes/network.py
@@ -45,7 +41,7 @@ def init_model():
     
     '''
     
-   	#global solver, scale, nframes
+    #global solver, scale, nframes
    	
     #info = params.model_info
     #model = info['full  _path']
@@ -65,6 +61,8 @@ def init_model():
     scale = nn.AvgPool2d(kernel_size=3, stride=2, padding=1).cuda()
     
     '''
+
+
     
 # either run a NN or only record data
 def process_input(car_data, run_nn, return_value_q):
@@ -72,16 +70,20 @@ def process_input(car_data, run_nn, return_value_q):
     # new_queued_data = data_processor.add_new_data(car_data)
     
     if run_nn:
-        print('fake running [NN]...') # or just sleep instead of a loop...
-        time.sleep(1)
+        print('fake running [NN]...')
+        #time.sleep(1)
         
         # run_model(new_queued_data)
     
         print("ran NN")
-        return_value_q.put((100, 100))
+        return_value_q.put((10001, 2800))
+
+    else:
+	pass
      
     return None
     
+
     
 
 def run_model(processed_data):
@@ -90,37 +92,5 @@ def run_model(processed_data):
 	raw_output = solver(some_input, Variable(metadata))  # Run the neural net
 	return raw_output
 
-
-
-
-#def image_callback(car_data):
-	#TODO: send new car_data to data processing and receive back list of 10 images
-#        raw_output = run_model(processed_data)
-#        nn_raw_output.publish(raw_output with_some_message_type)
-
-
-
-
-#def nn_runner():
-
-
-#	rospy.init_node('nn_runner')
-
-	# subscribe to car_data and discard any older data
-#        rospy.Subscriber('/bdd/car_data', BDDMsg.some_msg, image_callback, queue_size = None)
-
-	# init publisher for nn raw output
-#	nn_raw_output = rospy.Publisher('nn_raw_output', BDDMsg.BDDControlsMsg, queue_size=None)
-
-#	rospy.spin()
-
-
-
-
-#if __name__ == '__main__':
-#    try:
-    	#nn_runner()
-#    except rospy.ROSInterruptException:
-#    	pass
 
     

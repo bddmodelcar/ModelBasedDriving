@@ -86,7 +86,6 @@ class Driver():
             
         # else, don't start a new one, but record the new car data
         else:
-            #print('... NOT starting another ...')
             process_input(car_data, False, None)
             
 
@@ -98,10 +97,7 @@ class Driver():
         # TODO: Format the nn_output into steer and speed. Similar code to run_model in Network.py
         speed = nn_output[0] #data.speed
         direction = nn_output[1] #data.direction
-        
-        #TODO: make sure this works:
         Driver.control_pub.publish(BDDMsg.BDDControlsMsg(speed=speed, direction=direction))
-        print('published controls on topics \'controls\' ')
         
         
 
