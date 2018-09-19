@@ -10,13 +10,16 @@ lock = threading.Lock()
 os.environ['STOP'] = 'False'
 
 def apply_steer_pwm_gain(steer_pwm,M):
-    return (steer_pwm-M['steer_null']) * M['steer_gain'] + M['steer_null']
+    return (steer_pwm - M['steer_null']) * M['steer_gain'] + M['steer_null']
 
 
 def apply_motor_pwm_gain(motor_pwm,M):
     return (motor_pwm-M['motor_null']) * M['motor_gain'] + M['motor_null']
 
 
+# takes in steer and motor commands
+# sends to arduino
+# publishes them and the state of the car
 def mse_write_publish(M,Arduinos,steer_pwm,motor_pwm):
     steer_pwm = apply_steer_pwm_gain(steer_pwm,M)
     motor_pwm = apply_motor_pwm_gain(motor_pwm,M)
@@ -37,7 +40,7 @@ class State():
         self.state_transition_timer = None
         self.M = M
     def enter(self):
-        print('Entering '+self.name)
+        print('Entering ' + self.name)
         self.state_transition_timer = Timer(0)
     def process(self):
         pass #print(self.name+' processing')
@@ -161,7 +164,7 @@ class Aruco_Steer_Aruco_Motor(Computer_Control):
 
 
 
-
+# ???
 def buttons_to_state(Arduinos,M,BUTTON_DELTA):
     #print M['button_pwm_lst'][-1]
     if np.abs(M['button_pwm_lst'][-1] - M['state_four'].button_pwm_peak) < BUTTON_DELTA:
@@ -247,15 +250,15 @@ def setup(M,Arduinos):
     M['calibrated'] = False
     M['PID'] = [-1,-1]
 
-    state_one = Human_Control('state 1',1,1700,M,Arduinos)
+    state_one = Human_Control('state 1',1,1700,M,Arduinos) #### 
     state_two = Smooth_Human_Control('state 2',2,1424,M,Arduinos)
-    state_six = Net_Steer_Net_Motor('state 6',6,1900,M,Arduinos)
-    state_three = Net_Steer_Hum_Motor('state 3',3,1900,M,Arduinos)
+    state_six = Net_Steer_Net_Motor('state 6',6,1900,M,Arduinos) ####
+    state_three = Net_Steer_Hum_Motor('state 3',3,1900,M,Arduinos) ####
     state_five = Human_Control('state 5',5,1900,M,Arduinos)
-    state_seven = Human_Steer_Net_Motor('state 7',7,1900,M,Arduinos)
+    state_seven = Human_Steer_Net_Motor('state 7',7,1900,M,Arduinos) ####
     state_eight = Net_Steer_PID_Motor('state 8',8,1900,M,Arduinos)
     state_nine = Freeze('state 9',9,1900,M,Arduinos)
-    state_four = Calibration_State('state 4',4,870,M,Arduinos)
+    state_four = Calibration_State('state 4',4,870,M,Arduinos) ####
     state_ten = Aruco_Steer_Aruco_Motor('state 10',10,1900,M,Arduinos)
     """
     state_one = Human_Control('state 1',1,1900,M,Arduinos)

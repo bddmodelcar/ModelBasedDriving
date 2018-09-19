@@ -30,6 +30,8 @@ volatile int motor_pwm = 0;
 int servo_command_pwm = 0;
 int camera_command_pwm = 0;
 int motor_command_pwm = 0;
+
+//probably gets overwritten below
 int motor_null_pwm = 1500;
 int servo_null_pwm = 1400;
 
@@ -58,13 +60,14 @@ void setup()
 {
   Serial.begin(115200);
   Serial.setTimeout(5);
+
+  //empty the input buffer
   while(Serial.available() > 0) {
-    char t = Serial.read();
+    Serial.read();
   }
+  
   motor_servo_setup();
   encoder_setup();
-  //imu_setup();
-  //led_setup();
 }
 
 
@@ -86,12 +89,18 @@ void motor_servo_setup()
   
   while(servo_pwm==0 || motor_pwm==0) {
     delay(200);
+    Serial.println("waiting...");
   }
+
+
+  // tune arduino to set null pwm from controller (~1480)
   int N = 20;
   int servo_null_pwm__ = 0;
   int motor_null_pwm__ = 0;
   for( int i = 0; i < N; i = i + 1 ) {
     servo_null_pwm__ += servo_pwm;
+    Serial.print("setting null pwm... ");
+    Serial.print(servo_pwm);
     motor_null_pwm__ += motor_pwm;
     delay(15);
   }
@@ -111,12 +120,15 @@ void button_interrupt_service_routine(void) {
 
 
 void servo_interrupt_service_routine(void) {
+  //Serial.println("HELLLOOOOOOOO");
   volatile unsigned long int m = micros();
   volatile unsigned long int dt = m - servo_prev_interrupt_time;
   servo_prev_interrupt_time = m;
   if (dt>SERVO_MIN && dt<SERVO_MAX) {
     servo_pwm = dt;
     if(servo_command_pwm>0) {
+      //Serial.print("servo_command_pwm");
+      //Serial.println(servo_command_pwm);
       servo.writeMicroseconds(servo_command_pwm);
     } else if(servo_null_pwm>0) {
       servo.writeMicroseconds(servo_null_pwm);
@@ -154,15 +166,15 @@ int led_command = 0;
 void loop() {
 
   int A;
-  int num_serial_reads = 3;
+  int num_serial_reads = 2;
   long unsigned int now;
   
   for( int i = 0; i < num_serial_reads; i = i + 1 ) {
     A = Serial.parseInt();
-    Serial.print(A);
+    Serial.println(A);
     //A = servo_pwm+5000;
     now = millis();
-    if (A>500 && A<3000) {
+    if (A>500 && A<3000) { //Left max = 1830, right max = 1030
       servo_command_pwm = A;
       servo_command_time = now;
     } else if (A>=5000 && A<10000) {
@@ -176,11 +188,11 @@ void loop() {
     }
   }
 
-  //if(0){
-  if(now-servo_command_time > max_communication_delay || now-motor_command_time > max_communication_delay || now-camera_command_time > max_communication_delay) {
+  if(0){
+  //if(now-servo_command_time > max_communication_delay || now-motor_command_time > max_communication_delay) {
     servo_command_pwm = 0;
     motor_command_pwm = 0;
-    if(now-servo_command_time > 4*max_communication_delay || now-motor_command_time > 4*max_communication_delay || now-camera_command_time > 4*max_communication_delay) {
+    if(now-servo_command_time > 4*max_communication_delay || now-motor_command_time > 4*max_communication_delay) {
       servo.detach(); 
       motor.detach(); 
       camera.detach(); 
@@ -209,11 +221,16 @@ void loop() {
   Serial.print(encoder_value_1);
   Serial.print(",");
   Serial.print(analogRead(A_PIN_SERVO_FEEDBACK));
+    
+  if (servo_command_pwm == 1200){
+    Serial.print(1200);
+  }
   Serial.println(")");
+
 
   //led_loop();
   
-  delay(10);
+  delay(500);
 }
 
 
