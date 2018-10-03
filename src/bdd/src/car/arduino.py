@@ -1,19 +1,17 @@
+#!/usr/bin/env python
+
 import serial
 from params import params
 import time
 import rospy
 
+
+
+
+
 arduino = None
 
 
-
-
-
-def connect_to_arduino():
-	print("finding arduino")
-	arduino = serial.Serial(params.arduino_path, params.baudrate, timeout = params.timeout)
-	time.sleep(5) # give arduino time to boot
-	send_to_arduino(steer = steer_null_pwm, throttle = throttle_null_pwm)
 
 def setup():
 	connect_to_arduino()
@@ -26,8 +24,10 @@ def setup():
 
     print('exiting car node')
     arduino.close()
-    arduino = None
-    
+    arduino = None	
+
+
+
 
 def run(NN_data):
 
@@ -63,7 +63,14 @@ def run(NN_data):
 		publish_data(4, NN_data.steer, NN_data.throttle)
 
 
-	
+
+
+def connect_to_arduino():
+	print("finding arduino")
+	arduino = serial.Serial(params.arduino_path, params.baudrate, timeout = params.timeout)
+	time.sleep(5) # give arduino time to boot
+	send_to_arduino(steer = steer_null_pwm, throttle = throttle_null_pwm)
+
 
 
 
@@ -163,3 +170,11 @@ def publish_data(state_num, steer, throttle):
 	steer_used_pub.publish(steer)
 	throttle_used_pub.publish(throttle)
 
+
+
+
+if __name__ == '__main__':
+    try:
+    	setup()
+    except rospy.ROSInterruptException:
+    	pass

@@ -8,7 +8,7 @@ from sensor_msgs.msg import Image
 # add parent of parent directory to path so these files can be imported
 import os, sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
-from nn.nn_runner import init_model, process_input
+from nn.nn_runner import init_model, run_inference
 from params import params
 
 
@@ -68,7 +68,7 @@ class Driver():
         
             # Queue is used for only one tuple of return data: (speed, direction)
             print('STARTING NEW PROCESS')
-            Driver.current_process = Process(target = process_input, args = (car_data, Driver.nn_output))
+            Driver.current_process = Process(target = run_inference, args = (car_data, Driver.nn_output))
             Driver.current_process.start()
             Driver.current_process.join()
             

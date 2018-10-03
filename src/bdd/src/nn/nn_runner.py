@@ -64,22 +64,15 @@ def init_model():
 
 
     
-# either run a NN or only record data
-def process_input(car_data, run_nn, return_value_q):
-    # send new car_data to data_processor
-    # new_queued_data = data_processor.add_new_data(car_data)
+# un a NN 
+def run_inference(car_data, return_value_q):
+    print('fake running [NN]...')
+    time.sleep(1)
     
-    if run_nn:
-        print('fake running [NN]...')
-        #time.sleep(1)
-        
-        # run_model(new_queued_data)
-    
-        print("ran NN")
-        return_value_q.put((10001, 2800))
+    # run_model
 
-    else:
-	pass
+    print("ran NN")
+    return_value_q.put((1500, 1200))
      
     return None
     
