@@ -7,7 +7,7 @@ How to install ZED Camera Wrapper for ROS
 6. Execute `catkin_make zed-ros-wrapper` in your catkin directory
 7. `source ./devel/setup.bash`
 8. The wrapper ends up being a git repo so you can do `git pull` to update it.
-
+9. Find difference b/t publish data and loginfo
 
 
 Mandatory:
@@ -29,14 +29,17 @@ Helpful Tips:
 
 
 TODO:
-0. Find out why car node doesn't seem to work
 1. Write file for user options and read from it in different files that use user options
 2. Maybe update ZED firmware, but need help to do so.
 3. What conversion needs to be done on the image to use it in pytorch nn?
 4. How to make ZED use GPU? Some GPU ID in zed_camera.launch. A: should be good bc it selects best GPU. Make sure it's -1
 5. Make sure the return data queue in new_driver doesn't become filled with old data. Maybe just create a new queue every time a NN is invoked
-6. Find out how to make car sometimes use remote controller pwm and sometimes the pwm sent from python
+6. Figure out how Karl's calibration works
+7. Change nn directory name to "backend" and make sure everything still runs
+8. Consider changing constants in Arduino code from "#define" to final ints.
+9. Find a good delay time inside Arduino's loop  
 
+97. Put correct file description comments at the beginning of each file
 98. Note: i've changed the permissions of /media/nvidia/rosbags to allow writing to it (for log files)
 99. Remove BDDDualImage message type if not needed
 

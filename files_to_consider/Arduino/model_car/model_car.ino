@@ -86,6 +86,11 @@ void motor_servo_setup()
 
   attachPinChangeInterrupt(digitalPinToPinChangeInterrupt(PIN_MOTOR_IN),
     motor_interrupt_service_routine, CHANGE);
+
+  for (int i = 0; i < 20; i++){
+    Serial.println(servo_pwm);
+    Serial.println(motor_pwm);
+  }
   
   while(servo_pwm==0 || motor_pwm==0) {
     delay(200);

@@ -1,38 +1,48 @@
-#define SERVO_RIGHT_LIMIT 1030
-#define SERVO_LEFT_LIMIT  1830
-#define SERVO_ZERO        1480
-#define MOTOR_BACK_LIMIT  0
-#define MOTOR_FWD_LIMIT   0
-#define MOTOR_ZERO        0
+#define SERVO_RIGHT_LIMIT 1100
+#define SERVO_ZERO        1450
+#define SERVO_LEFT_LIMIT  1800
+
+#define MOTOR_BACK_LIMIT  1000 // Unkown, but shouldn't be lower to not appear as servo pwm in code below
+#define MOTOR_FWD_LIMIT   2000 // Unknown, could be higher, but as 2000 it makes MOTOR_ZERO be halfway to BACK_LIMIT
+#define MOTOR_ZERO        1500
+
+#define STATE_ONE         872  // Calibration
+#define STATE_TWO         1432 // Human correction
+#define STATE_THREE       1720 // Human annotation
+#define STATE_FOUR        1908 // NN control
 
 #include "PinChangeInterrupt.h"
 #include <Servo.h>
 
 // These come from the radio receiver via three black-red-white ribbons.
-#define PIN_SERVO_IN 11
 #define PIN_MOTOR_IN 10
+#define PIN_SERVO_IN 11
+#define PIN_BUTTON_IN 12
+
 
 // These go out to ESC (electronic speed controller) and steer servo via black-red-white ribbons.
-#define PIN_SERVO_OUT 9
 #define PIN_MOTOR_OUT 8
+#define PIN_SERVO_OUT 9
 
 Servo servo;
 Servo motor;
 
-int RC_servo_pwm;
-int RC_motor_pwm;
-int servo_pwm;
-int motor_pwm;
+volatile int RC_servo_pwm = 0;
+volatile int RC_motor_pwm = 0;
+volatile int RC_button_pwm = 1210;
+int servo_pwm = 0;
+int motor_pwm = 0;
 int servos_attached = 0;
 
-int servo_delay;
-int motor_delay;
+int servo_delay = 0;
+int motor_delay = 0;
 int max_communication_delay = 100;
 
-volatile long unsigned int servo_prev_interrupt_time  = 0;
-volatile long unsigned int motor_prev_interrupt_time  = 0;
-long unsigned int servo_command_time;
-long unsigned int motor_command_time;
+volatile unsigned long int servo_prev_interrupt_time  = 0;
+volatile unsigned long int motor_prev_interrupt_time  = 0;
+volatile unsigned long int button_prev_interrupt_time = 0;
+unsigned long int servo_command_time = 0;
+unsigned long int motor_command_time = 0;
 
 volatile float encoder_value_1 = 0.0;
 volatile float encoder_value_2 = 0.0;
@@ -41,9 +51,6 @@ volatile float encoder_value_2 = 0.0;
 
 void setup() {
   // put your setup code here, to run once:
-
-  motor_servo_setup();
-  encoder_setup();
   Serial.begin(115200);
   Serial.setTimeout(5);
 
@@ -51,7 +58,33 @@ void setup() {
   while(Serial.available() > 0) {
     Serial.read();
   }
+  
+  motor_servo_setup();
+  encoder_setup();
+}
 
+
+
+
+void motor_servo_setup() { 
+  pinMode(PIN_BUTTON_IN, INPUT_PULLUP);
+  pinMode(PIN_SERVO_IN, INPUT_PULLUP);
+  pinMode(PIN_MOTOR_IN, INPUT_PULLUP);
+  
+  attachPinChangeInterrupt(digitalPinToPinChangeInterrupt(PIN_SERVO_IN),
+    servo_interrupt_service_routine, CHANGE);
+
+  attachPinChangeInterrupt(digitalPinToPinChangeInterrupt(PIN_MOTOR_IN),
+    motor_interrupt_service_routine, CHANGE);
+
+  attachPinChangeInterrupt(digitalPinToPinChangeInterrupt(PIN_BUTTON_IN),
+    button_interrupt_service_routine, CHANGE);
+
+
+  while(RC_servo_pwm == 0 || RC_motor_pwm == 0) {
+    delay(200);
+    Serial.println("waiting for remote controller to be on...");
+  }
 }
 
 
@@ -59,27 +92,36 @@ void setup() {
 
 void loop() {
 
-  int pwm_input;
+  int serial_pwm_input;
   int num_serial_reads = 2;
 
-  // takes in steering pwm and then throttle pwm, where 10,000 is temporarily 
-  // added to the throttle pwm to know it refers to throttle and not steering
-  for( int i = 0; i < num_serial_reads; i = i + 1 ) {
-    pwm_input = Serial.parseInt();
-    Serial.println(pwm_input);
+  /* 
+   *  takes in steering pwm and then throttle pwm. 
+   *  10,000 is temporarily added to throttle pwm to differentiate
+   *  it from steeting pwm
+  */
+  for( int i = 0; i < num_serial_reads; i++ ) {
+    serial_pwm_input = Serial.parseInt();
+    Serial.println(serial_pwm_input);
+
 
     // steering pwm
-    if (pwm_input > 0 && pwm_input < 10000) {
-      servo_pwm = pwm_input;
+    if (serial_pwm_input >= SERVO_RIGHT_LIMIT && serial_pwm_input <= SERVO_LEFT_LIMIT) {
+      servo_pwm = serial_pwm_input;
       servo_command_time = millis();
     } 
 
-    // throttle pwm + 10000
-    else if (pwm_input >= 10000 && pwm_input < 100000) {
-      motor_pwm = pwm_input - 10000;
-      motor_command_time = millis();
+    // throttle pwm + 10,000. To differentiate it from serial input servo PWM
+    else if (serial_pwm_input >= 10000 && serial_pwm_input < 100000) {
+      if (serial_pwm_input >= MOTOR_BACK_LIMIT && serial_pwm_input <= MOTOR_FWD_LIMIT) {
+        motor_pwm = serial_pwm_input - 10000;
+        motor_command_time = millis();
+      }
     }
   }
+
+  servo.writeMicroseconds(servo_pwm);
+  motor.writeMicroseconds(motor_pwm);
 
   // time since last command
   servo_delay = millis() - servo_command_time;
@@ -99,7 +141,7 @@ void loop() {
   } 
   
   else {
-    if(servos_attached==0) {
+    if(servos_attached == 0) {
       servo.attach(PIN_SERVO_OUT); 
       motor.attach(PIN_MOTOR_OUT); 
       servos_attached = 1;
@@ -116,33 +158,15 @@ void loop() {
 
 
 void print_stats() {
-  Serial.print("('mse',");
+  Serial.print("mse,");
+  Serial.print(RC_button_pwm);
+  Serial.print(", ");
   Serial.print(RC_servo_pwm);
-  Serial.print(",");
-  Serial.print(RC_motor_pwm);
-  Serial.print(",");
-  Serial.print(encoder_value_1);
-  Serial.println(")");
-}
-
-
-
-
-void motor_servo_setup() { 
-  // not sure why needs to be PULLUP
-  pinMode(PIN_SERVO_IN, INPUT_PULLUP);
-  pinMode(PIN_MOTOR_IN, INPUT_PULLUP);
-  
-  attachPinChangeInterrupt(digitalPinToPinChangeInterrupt(PIN_SERVO_IN),
-    servo_interrupt_service_routine, CHANGE);
-
-  attachPinChangeInterrupt(digitalPinToPinChangeInterrupt(PIN_MOTOR_IN),
-    motor_interrupt_service_routine, CHANGE);
-  
-  while(servo_pwm==0 || motor_pwm==0) {
-    delay(200);
-    Serial.println("waiting for remote controller...");
-  }
+  Serial.print(", ");
+  Serial.println(RC_motor_pwm);
+  //Serial.print(", ");
+  //Serial.print(encoder_value_1);
+  //Serial.println(")");
 }
 
 
@@ -151,14 +175,12 @@ void motor_servo_setup() {
 // this func gets invoked always (even if RC is off) for some reason. 
 // Maybe needs a pullup resistor? Or leave it be
 // not sure why this even works because it would also count for how long
-// the signal is low, rather than just how long it's on
+// the signal is low, rather than just how long it's on, since it detects changes
 void servo_interrupt_service_routine(void) {
-  
-  // will use controller pwm later for having human take control of car
-  RC_servo_pwm = micros() - servo_prev_interrupt_time;
+  /*volatile*/ int received_pwm = micros() - servo_prev_interrupt_time;
   servo_prev_interrupt_time = micros(); 
-  if (servo_pwm > SERVO_RIGHT_LIMIT && servo_pwm < SERVO_LEFT_LIMIT) {
-    servo.writeMicroseconds(servo_pwm);
+  if (received_pwm >= SERVO_RIGHT_LIMIT && received_pwm <= SERVO_LEFT_LIMIT) {
+    RC_servo_pwm = received_pwm;
   } 
 }
 
@@ -166,11 +188,21 @@ void servo_interrupt_service_routine(void) {
 
 
 void motor_interrupt_service_routine(void) {
-  
-  RC_motor_pwm = micros() - motor_prev_interrupt_time;
+  /*volatile*/ int received_pwm = micros() - motor_prev_interrupt_time;
   motor_prev_interrupt_time = micros(); 
-  if (motor_pwm > MOTOR_BACK_LIMIT && motor_pwm < MOTOR_FWD_LIMIT) {
-    servo.writeMicroseconds(motor_pwm);
+  if (received_pwm >= MOTOR_BACK_LIMIT && received_pwm <= MOTOR_FWD_LIMIT) {
+    RC_motor_pwm = received_pwm;
+  }
+}
+
+
+
+
+void button_interrupt_service_routine(void) {
+  /*volatile*/ int received_pwm = micros() - button_prev_interrupt_time;
+  button_prev_interrupt_time = micros();
+  if (received_pwm >= 500 && received_pwm <= 2000) {
+    RC_button_pwm = received_pwm;
   }
 }
 

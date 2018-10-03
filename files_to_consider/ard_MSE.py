@@ -164,9 +164,13 @@ class Aruco_Steer_Aruco_Motor(Computer_Control):
 
 
 
-# ???
+# takes button PWM and converts to state
 def buttons_to_state(Arduinos,M,BUTTON_DELTA):
     #print M['button_pwm_lst'][-1]
+
+        ###
+    # STATE FOUR #
+        ###
     if np.abs(M['button_pwm_lst'][-1] - M['state_four'].button_pwm_peak) < BUTTON_DELTA:
         if M['current_state'] == None:
             M['current_state'] = M['state_four']
@@ -182,6 +186,9 @@ def buttons_to_state(Arduinos,M,BUTTON_DELTA):
     if M['current_state'] == None:
         return
 
+        ###
+    # STATE ONE / TWO #
+        ###
     for s in [M['state_one'],M['state_two']]:
         if np.abs(M['button_pwm_lst'][-1] - s.button_pwm_peak) < BUTTON_DELTA:  
             if M['current_state'] == s:
@@ -192,8 +199,9 @@ def buttons_to_state(Arduinos,M,BUTTON_DELTA):
             M['previous_state'].leave()
             return
 
-
-
+        ###
+    # STATE THREE #
+        ###
     if np.abs(M['button_pwm_lst'][-1] - M['state_three'].button_pwm_peak) < BUTTON_DELTA:
         if M['aruco_evasion_active'] == 1 and M['current_state'] != M['state_ten']:
            #print "HERE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
@@ -315,27 +323,34 @@ def run_loop(Arduinos,M,BUTTON_DELTA=50,):
             assert(False)
         while M['Stop_Arduinos'] == False or not rospy.is_shutdown():
             
+            # trying to get data from Arduino. Publishes encoder val
             if not serial_data_to_messages(Arduinos,M):
                 continue
 
+            # set current state to button input
             buttons_to_state(Arduinos,M,BUTTON_DELTA)
 
             if M['current_state'] == None:
                 continue
 
+            # shorten all lists' length to newest elements
             manage_list_lengths(M)
 
+            # computes the smoothed-out data in order to use for calibration
             smooth_data(M)
             
+            # If in calibration state, then calibrate. Then pub your state?
             if M['current_state'] == M['state_four']:
                 #M['aruco_evasion_active'] = 0
                 process_state_4(M)
                 M['state_pub'].publish(std_msgs.msg.Int32(M['current_state'].number))
                 continue
             else:
+                # if not calibrated go back to top of loop
                 if not calibrated(Arduinos,M):
                     continue
 
+            # save percentages of steer and motor
             M['steer_percent'] = pwm_to_percent(M,M['steer_null'],M['steer_pwm_lst'][-1],M['steer_max'],M['steer_min'])
             M['motor_percent'] = pwm_to_percent(M,M['motor_null'],M['motor_pwm_lst'][-1],M['motor_max'],M['motor_min'])
             M['pid_motor_percent'] = pwm_to_percent(M,M['motor_null'],M['pid_motor_pwm'],M['motor_max'],M['motor_min'])
@@ -347,6 +362,12 @@ def run_loop(Arduinos,M,BUTTON_DELTA=50,):
             #print(M['pid_motor_percent'],M['motor_freeze_threshold'],int(100*np.array(M['encoder_lst'][0:5]).mean()),int(100*np.array(M['encoder_lst'][-5:]).mean()),int(M['current_state'].state_transition_timer.time()))
                          
             freeze = False
+
+                ###
+            # ??????? 
+            # I don't think I need this stuff. I'm not aware of any acceleration needs
+                ###
+
             if M['current_state'] in [M['state_three'],M['state_five'],M['state_six'],M['state_seven']]:
 
                 if M['pid_motor_percent'] > M['motor_freeze_threshold'] and np.array(M['encoder_lst'][0:20]).mean() > 1 and np.array(M['encoder_lst'][-20:]).mean()<0.1 and M['current_state'].state_transition_timer.time() > 1:
@@ -380,22 +401,34 @@ def run_loop(Arduinos,M,BUTTON_DELTA=50,):
                     M['previous_state'].leave()
 
 
+            ###            ###          ###
+            # Don't need the above stuff #
+            ###            ###          ###
             
 
                 
-
+            # useless
             if M['current_state'] == M['state_nine']:
                 #M['aruco_evasion_active'] = 0
                 pass
 
+            # if in Net Steer, Human Control, Net Control, or Net Motor
             elif M['current_state'] in [M['state_three'],M['state_five'],M['state_six'],M['state_seven']]:
                 #M['aruco_evasion_active'] = 0
                 human_motor = False
                 human_steer = False
+
+                # if steering mostly to left AKA not forward
+                # then it means human is controlling it? why?
                 if np.abs(M['steer_percent'] - 49) > 5:
                     human_steer = True
+
+                # if motor spinning forward
+                # then it means human is controlling it? why?
                 if np.abs(M['motor_percent'] - 49) > 5:
                     human_motor = True
+
+                # set appropriate state based on what human is doing
                 if human_motor and human_steer:
                     if M['current_state'] != M['state_five']:
                         M['previous_state'] = M['current_state']
@@ -421,8 +454,10 @@ def run_loop(Arduinos,M,BUTTON_DELTA=50,):
                         M['current_state'].enter()
                         M['previous_state'].leave()
 
+            # mse_write commands to arduino and publish commands to ROS
             M['current_state'].process()
 
+            # publish which state we're in
             M['state_pub'].publish(std_msgs.msg.Int32(M['current_state'].number))
 
             """
@@ -495,7 +530,7 @@ def pid_processing(M):
         else:
             M['pid_motor_pwm'] = M['smooth_motor']
 
-
+# get button, steer, pwm, encoder from arduino
 def serial_data_to_messages(Arduinos,M):
     read_str = Arduinos['MSE'].readline()
     try:
@@ -519,12 +554,15 @@ def serial_data_to_messages(Arduinos,M):
 
     
      
-
+# shorten all lists by keeping last 'n_lst_steps' elements
+# once a list's length is 1.2X good length
 def manage_list_lengths(M):
     lock.acquire()
     for k in M:
         if type(M[k]) == list:        
             if len(M[k]) > 1.2 * M['n_lst_steps']:
+
+                # k = k[-n_lst_steps : ]
                 M[k] = M[k][-M['n_lst_steps']:]
     lock.release() 
 
