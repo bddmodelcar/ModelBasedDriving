@@ -1,11 +1,11 @@
 #!/usr/bin/env python
 
 import serial
-# from params import params
+from params import params
 import time
-# import rospy
-# import bdd.msg as BDDMsg
-# from std_msgs.msg import Int32
+import rospy
+import bdd.msg as BDDMsg
+from std_msgs.msg import Int32
 
 
 
@@ -13,14 +13,14 @@ class ArduinoCar():
 
     arduino = None
     NN_data = None
-    # state_pub = rospy.Publisher('state', Int32, queue_size=5)
-    # steer_used_pub = rospy.Publisher('steer_used', Int32, queue_size=5)
-    # throttle_used_pub = rospy.Publisher('throttle_used', Int32, queue_size=5)
+    state_pub = rospy.Publisher('state', Int32, queue_size=5)
+    steer_used_pub = rospy.Publisher('steer_used', Int32, queue_size=5)
+    throttle_used_pub = rospy.Publisher('throttle_used', Int32, queue_size=5)
 
     def __init__(self):
         ArduinoCar.connect_to_arduino()
-        #rospy.init_node('arduino_car')
-        # rospy.Subscriber('controls', BDDMsg.BDDControlsMsg, callback = Arduino.update_data_callback)
+        rospy.init_node('arduino_car')
+        rospy.Subscriber('controls', BDDMsg.BDDControlsMsg, callback = ArduinoCar.update_data_callback)
         ArduinoCar.run()
 
         print('exiting car node')
@@ -36,7 +36,7 @@ class ArduinoCar():
     @classmethod
     def run(cls):
 
-        while True or not rospy.is_shutdown():
+        while not rospy.is_shutdown():
 
             # convert NN_data to pwm
             if not cls.NN_data:
