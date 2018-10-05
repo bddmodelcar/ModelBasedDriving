@@ -4,8 +4,8 @@
     <node name="new_driver" pkg="bdd" type="new_driver.py" output="screen"/>
 
     <!-- launch ZED camera using its ros wrapper --> 
-    <include file="$(find zed_wrapper)/launch/zed.launch"/>
-    
+    <!-- <include file="$(find zed_wrapper)/launch/zed.launch"/>-->
+
     <!-- launch car control inputs node -->
     <node name="arduino_car" pkg="bdd" type="arduino_car.py" output="screen"/>
 

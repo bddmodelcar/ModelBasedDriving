@@ -6,10 +6,11 @@
 #define MOTOR_FWD_LIMIT   2000 // Unknown, could be higher, but as 2000 it makes MOTOR_ZERO be halfway to BACK_LIMIT
 #define MOTOR_ZERO        1500
 
-#define STATE_ONE         872  // Calibration
-#define STATE_TWO         1432 // Human correction
-#define STATE_THREE       1720 // Human annotation
-#define STATE_FOUR        1908 // NN control
+#define STATE_ONE         1908 // NN control
+#define STATE_TWO         1720 // Human annotation
+#define STATE_THREE       1432 // Human correction
+#define STATE_FOUR        872  // Calibration
+
 
 #include "PinChangeInterrupt.h"
 #include <Servo.h>
@@ -30,8 +31,9 @@ Servo motor;
 volatile int RC_servo_pwm = 0;
 volatile int RC_motor_pwm = 0;
 volatile int RC_button_pwm = 1210;
-int servo_pwm = 0;
-int motor_pwm = 0;
+int button_pwm_epsilon = 50;
+int servo_pwm = SERVO_ZERO;
+int motor_pwm = MOTOR_ZERO;
 int servos_attached = 0;
 
 int servo_delay = 0;
@@ -102,8 +104,6 @@ void loop() {
   */
   for( int i = 0; i < num_serial_reads; i++ ) {
     serial_pwm_input = Serial.parseInt();
-    Serial.println(serial_pwm_input);
-
 
     // steering pwm
     if (serial_pwm_input >= SERVO_RIGHT_LIMIT && serial_pwm_input <= SERVO_LEFT_LIMIT) {
@@ -113,8 +113,9 @@ void loop() {
 
     // throttle pwm + 10,000. To differentiate it from serial input servo PWM
     else if (serial_pwm_input >= 10000 && serial_pwm_input < 100000) {
+      serial_pwm_input -= 10000;
       if (serial_pwm_input >= MOTOR_BACK_LIMIT && serial_pwm_input <= MOTOR_FWD_LIMIT) {
-        motor_pwm = serial_pwm_input - 10000;
+        motor_pwm = serial_pwm_input;
         motor_command_time = millis();
       }
     }
@@ -151,14 +152,14 @@ void loop() {
   encoder_loop(); 
   print_stats(); 
   
-  delay(500);
+  delay(30);
 }
 
 
 
 
 void print_stats() {
-  Serial.print("mse,");
+  Serial.print("mse, ");
   Serial.print(RC_button_pwm);
   Serial.print(", ");
   Serial.print(RC_servo_pwm);
