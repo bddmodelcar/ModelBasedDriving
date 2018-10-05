@@ -39,7 +39,7 @@ class ArduinoCar():
 
         while not rospy.is_shutdown():
 
-        print('helllo')
+            print('helllo')
             # convert NN_data to pwm
             if not cls.NN_data:
                 # print('no NN data')
