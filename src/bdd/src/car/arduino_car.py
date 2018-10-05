@@ -36,8 +36,10 @@ class ArduinoCar():
     @classmethod
     def run(cls):
 
+
         while not rospy.is_shutdown():
 
+        print('helllo')
             # convert NN_data to pwm
             if not cls.NN_data:
                 # print('no NN data')
@@ -231,5 +233,5 @@ class ArduinoCar():
 if __name__ == '__main__':
     try:
         ArduinoCar()
-    except: #rospy.ROSInterruptException:
+    except rospy.ROSInterruptException:
         pass
