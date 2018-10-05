@@ -1,6 +1,6 @@
-import rospy
-import bdd.msg as BDDMsg
-from sensor_msgs.msg import Image
+#import rospy
+#import bdd.msg as BDDMsg
+#from sensor_msgs.msg import Image
 import time
 
 
@@ -64,15 +64,16 @@ def init_model():
 
 
     
-# un a NN 
+# run a NN 
 def run_inference(car_data, return_value_q):
-    print('fake running [NN]...')
+    #print('fake running [NN]...')
     time.sleep(1)
     
     # run_model
 
-    print("ran NN")
-    return_value_q.put((1500, 1200))
+    #print("ran NN")
+    # (steer, throttle)
+    return_value_q.put((70, 55))
      
     return None
     

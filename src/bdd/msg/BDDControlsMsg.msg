@@ -1,2 +1,2 @@
-float32 speed
-float32 direction
+float32 steer
+float32 throttle

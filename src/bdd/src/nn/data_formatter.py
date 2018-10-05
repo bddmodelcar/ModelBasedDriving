@@ -20,15 +20,18 @@ class DataFormatter():
 
         
 
-    def format_input_data(input_data):
+    @classmethod
+    def format_input_data(cls, input_data):
         # stack images correctly
         # correct number of channels and all that stuff
-        return input_data_buffer
+        cls.input_data_buffer = input_data
+        return cls.input_data_buffer
 
-
-    def format_output_data(output_data):
+    @classmethod
+    def format_output_data(cls, output_data):
         # choose which timeframes of steer and throttle to use
         # or whether to do smoothing or whatnot
-        return output_data_buffer
+        cls.output_data_buffer = output_data
+        return cls.output_data_buffer
 
 

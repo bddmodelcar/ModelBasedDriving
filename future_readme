@@ -37,7 +37,7 @@ TODO:
 6. Figure out how Karl's calibration works
 7. Change nn directory name to "backend" and make sure everything still runs
 8. Consider changing constants in Arduino code from "#define" to final ints.
-9. Find a good delay time inside Arduino's loop
+9. Find a good delay time inside Arduino's loop -- there's shit n the computer-side buffer. I need to either read faster or limit the amount of messages that can sit on the buffer.
 10. Change ROS message to be throttle, speed
 
 97. Put correct file description comments at the beginning of each file

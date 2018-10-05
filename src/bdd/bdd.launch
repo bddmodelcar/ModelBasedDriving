@@ -7,6 +7,6 @@
     <include file="$(find zed_wrapper)/launch/zed.launch"/>
     
     <!-- launch car control inputs node -->
-    <node name="arduino.py" pkg="bdd" type="arduino.py" output="screen"/>
+    <node name="arduino_car" pkg="bdd" type="arduino_car.py" output="screen"/>
 
 </launch>

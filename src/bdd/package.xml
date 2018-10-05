@@ -53,8 +53,6 @@
   <build_depend>message_generation</build_depend>
   <build_export_depend>rospy</build_export_depend>
   <exec_depend>rospy</exec_depend>
-  <!-- <exec_depend>python-opencv2</exec_depend> -->
-  <!-- <exec_depend>cv_bridge</exec_depend> -->
   <exec_depend>python-numpy</exec_depend>
   <exec_depend>message_runtime</exec_depend>
 

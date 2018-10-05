@@ -9,6 +9,7 @@ from sensor_msgs.msg import Image
 import os, sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 from nn.nn_runner import init_model, run_inference
+from nn.data_formatter import DataFormatter
 from params import params
 
 
@@ -35,7 +36,6 @@ class Driver():
 
     current_process = Process()
     nn_output = Queue() # Queue used for getting return data from separate process
-    formatter = DataFormatter() 
     
     #net = None
 
@@ -51,7 +51,6 @@ class Driver():
 
         Driver.controls_pub = rospy.Publisher('controls', BDDMsg.BDDControlsMsg, queue_size=None)
         rospy.Subscriber('/zed/depth/depth_registered', Image, self.cam_callback, queue_size = 10)
-        Driver.cam_callback(self, None)
         rospy.spin()
     
     
@@ -61,19 +60,19 @@ class Driver():
     '''
     def cam_callback(self, car_data):
 
-        nn_input = formatter.format_input_data(car_data)
+        nn_input = DataFormatter.format_input_data(car_data)
 
         # if no NN process currerntly running, start a new NN process
         if not Driver.current_process.is_alive():
         
             # Queue is used for only one tuple of return data: (speed, direction)
-            print('STARTING NEW PROCESS')
+            #print('STARTING NEW PROCESS')
             Driver.current_process = Process(target = run_inference, args = (car_data, Driver.nn_output))
             Driver.current_process.start()
             Driver.current_process.join()
             
             try:
-                car_controls = formatter.format_output_data(Driver.nn_output.get(False))
+                car_controls = DataFormatter.format_output_data(Driver.nn_output.get(False))
                 self.send_to_car(car_controls)
             except Empty:
                 print('queue is empty -- no data to send to car')
@@ -84,10 +83,10 @@ class Driver():
     # publishes car controls on "/controls" topic
     def send_to_car(self, nn_output):
 
-        # TODO: Format the nn_output into steer and speed. Similar code to run_model in Network.py
-        speed = nn_output[0] #data.speed
-        direction = nn_output[1] #data.direction
-        Driver.controls_pub.publish(BDDMsg.BDDControlsMsg(speed = speed, direction = direction))
+        # TODO: Format the nn_output into steer and throttle. Similar code to run_model in Network.py
+        steer = nn_output[0] # first part of output
+        throttle = nn_output[1] # second part of output
+        Driver.controls_pub.publish(BDDMsg.BDDControlsMsg(steer = steer, throttle = throttle))
         
         
 
