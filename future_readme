@@ -7,7 +7,7 @@ How to install ZED Camera Wrapper for ROS
 6. Execute `catkin_make zed-ros-wrapper` in your catkin directory
 7. `source ./devel/setup.bash`
 8. The wrapper ends up being a git repo so you can do `git pull` to update it.
-9. Find difference b/t publish data and loginfo
+
 
 
 Mandatory:
@@ -17,28 +17,33 @@ Mandatory:
 
 
 Helpful Tips / Troubleshooting:
-1. *source devel/setup.bash*
+1. source devel/setup.bash
 2. ROS's built-in `sensor_msgs` package defines messages for commonly used sensors. The ZED camera uses `Image.msg` message type when publishing images. Its implementation can be found using `roscd sensor_msgs/msg`
 3. Settings for the ZED camera are found at zed.launch, and the launch file(s) it includes. Also be sure to read its READMEs which are at multiple places in its directory tree.
 4. When connecting the flash drive used for storing log files, it mounts itself at /media/nvidia/rosbags
 5. Make sure correct path to Arduino is set in params file
 
 
-***Before sourcing from devel/setup.bash: I import yaml and it gets imported from /usr/lib/python2.7/dist-packages/yaml/__init__.pyc. Then when I do yaml.representer, it says that it exists. But if I source setup.bash first, then it  sources yaml from /home/nvidia/ModelBasedDriving/devel/lib/python2.7/dist-packages/yaml/__init__.pyc'. Then when I do yaml.representer, it does NOT find it. So apparently the yaml package there is missing its modules for some reason, so I copy-pasted them in. We'll see how much of a solution that is (I was able to catkin_make + source setup.bash and it still works (for some reason...)). Not sure why ROS uses that version of yaml instead of the python2.7 in /usr/lib.***
---Could probably just delete that version so it uses the system's version of yaml instead. And if it creates its own version again in the future, then hunt down what prompts it to create its own version.
 
 
 TODO:
-1. Write file for user options and read from it in different files that use user options
-2. Maybe update ZED firmware, but need help to do so.
-3. What conversion needs to be done on the image to use it in pytorch nn?
-4. How to make ZED use GPU? Some GPU ID in zed_camera.launch. A: should be good bc it selects best GPU. Make sure it's -1
-5. Make sure the return data queue in new_driver doesn't become filled with old data. Maybe just create a new queue every time a NN is invoked
-6. Figure out how Karl's calibration works
-7. Change nn directory name to "backend" and make sure everything still runs
-8. Consider changing constants in Arduino code from "#define" to final ints.
-9. Find a good delay time inside Arduino's loop -- there's shit n the computer-side buffer. I need to either read faster or limit the amount of messages that can sit on the buffer.
-10. Change ROS message to be throttle, speed
+
+1. Maybe update ZED firmware, but need help to do so.
+2. What conversion needs to be done on the image to use it in pytorch nn?
+3. Make sure the return data queue in new_driver doesn't become filled with old data. Maybe just create a new queue every time a NN is invoked
+4. Figure out how Karl's calibration works
+5. Change nn directory name to "backend" and make sure everything still runs
+6. Consider changing constants in Arduino code from "#define" to final ints.
+7. Add smoothing for throttle to arduino code, if approved. 
+
+
+6. Add smoothing options and speed limit option
+7. test car around. (Can use blue battery for computer)
+8. try out the screen program by sshing in, running program, disconnecting, reconnecting, and getting back to screen.
+9. Make new calibration mode, like karls.
+
+
+99. Ask Sascha if code structure and naming conventions are intuitive for him
 
 97. Put correct file description comments at the beginning of each file
 98. Note: i've changed the permissions of /media/nvidia/rosbags to allow writing to it (for log files)

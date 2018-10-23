@@ -6,6 +6,7 @@ import time
 import rospy
 import bdd.msg as BDDMsg
 from std_msgs.msg import Int32
+import sys
 
 
 
@@ -18,14 +19,13 @@ class ArduinoCar():
     throttle_used_pub = rospy.Publisher('throttle_used', Int32, queue_size=5)
 
     def __init__(self):
-        ArduinoCar.connect_to_arduino()
         rospy.init_node('arduino_car')
         rospy.Subscriber('controls', BDDMsg.BDDControlsMsg, callback = ArduinoCar.update_data_callback)
-        ArduinoCar.run()
+        ArduinoCar.connect_to_arduino()
 
-        print('exiting car node')
-        ArduinoCar.arduino.close()
-        ArduinoCar.arduino = None
+        ArduinoCar.run()
+        
+        
 
     @classmethod
     def update_data_callback(cls, data):
@@ -35,18 +35,16 @@ class ArduinoCar():
 
     @classmethod
     def run(cls):
-
+ 
 
         while not rospy.is_shutdown():
+        
+        
 
-            print('helllo')
-            # convert NN_data to pwm
             if not cls.NN_data:
-                # print('no NN data')
+                print('no NN data')
                 continue
 
-            NN_steer_pwm = cls.convert_steer_to_pwm(cls.NN_data.steer)
-            NN_throttle_pwm = cls.convert_throttle_to_pwm(cls.NN_data.throttle)
             serial_data = cls.get_serial_data()
             if not serial_data:
                 print('no serial data')
@@ -55,30 +53,35 @@ class ArduinoCar():
             RC_button_pwm, RC_steer_pwm, RC_throttle_pwm = serial_data
             current_state = cls.convert_button_to_state(RC_button_pwm)
 
-            # based on state choose what to do with all the data
+            # Neural Network Execution
             if current_state == "state_one":
+                NN_steer_pwm = cls.convert_steer_to_pwm(cls.NN_data.steer)
+                NN_throttle_pwm = cls.convert_throttle_to_pwm(cls.NN_data.throttle)
                 print('state_one -- Neural Network Execution', NN_steer_pwm, NN_throttle_pwm)
-                # Neural Network Execution
-                #publish_data(4, NN_data.steer, NN_data.throttle)
                 cls.send_to_arduino(NN_steer_pwm, NN_throttle_pwm)
-
+                cls.publish_data(1, cls.NN_data.steer, cls.NN_data.throttle)
 
             # Human annotation mode
             elif current_state == "state_two":
                 print('state_two -- human annotation')
+                cls.send_to_arduino(RC_steer_pwm, RC_throttle_pwm)
+                steer = cls.convert_pwm_to_NN_steer(RC_steer_pwm)
+                throttle = cls.convert_pwm_to_NN_throttle(RC_throttle_pwm)
+                cls.publish_data(2, steer, throttle)
 
+            # Human correction mode (human control)
             elif current_state == "state_three":
-                # Human correction mode (human control)
                 print('state_three -- human control')
                 cls.send_to_arduino(RC_steer_pwm, RC_throttle_pwm)
                 steer = cls.convert_pwm_to_NN_steer(RC_steer_pwm)
                 throttle = cls.convert_pwm_to_NN_throttle(RC_throttle_pwm)
-                #publish_data(3, steer, throttle)
+                cls.publish_data(3, steer, throttle)
 
-
+            # calibration
             elif current_state == "state_four":
-                # calibration
                 cls.controller_calibration_prompt(RC_steer_pwm, RC_throttle_pwm)
+                cls.publish_data(4, None, None)
+
 
 
     @classmethod
@@ -87,12 +90,14 @@ class ArduinoCar():
         cls.arduino = serial.Serial(params.arduino_path, params.baudrate, timeout = params.timeout)
         time.sleep(5) # give arduino time to boot
         print("found arduino")
-        cls.send_to_arduino(steer = params.steer_min_pwm, throttle = params.throttle_null_pwm)
+        #cls.send_to_arduino(steer = params.steer_min_pwm, throttle = params.throttle_null_pwm)
         time.sleep(1)
-        cls.send_to_arduino(steer = params.steer_max_pwm, throttle = params.throttle_null_pwm)
+        print('1')
+        #cls.send_to_arduino(steer = params.steer_max_pwm, throttle = params.throttle_null_pwm)
         time.sleep(1)
+        print('2')
         cls.send_to_arduino(steer = params.steer_null_pwm, throttle = params.throttle_null_pwm)
-
+        return
 
 
 
@@ -102,11 +107,9 @@ class ArduinoCar():
 
         # expected line format: "mse, <button_pwm>, <steer_pwm>, <throttle_pwm>"
         line = line.split(', ')
-        #print(line)
         if "mse" == line[0]:
             data = line[1:]
             data = [int(x) for x in data] #convert each element to a number
-            #print(data)
             return data
         else:
             return None
@@ -149,12 +152,15 @@ class ArduinoCar():
     @classmethod
     def controller_calibration_prompt(cls, RC_steer_pwm, RC_throttle_pwm):
         prompt = str()
-        if abs(RC_steer_pwm - params.steer_null_pwm) < 7 and abs(RC_throttle_pwm - params.throttle_null_pwm) < 7:
+        if abs(RC_steer_pwm - params.steer_null_pwm) < params.calibration_epsilon and abs(RC_throttle_pwm - params.throttle_null_pwm) < params.calibration_epsilon:
             prompt = '4 - Calibration \tOK\tOK'
-        elif abs(RC_steer_pwm - params.steer_null_pwm) > 7 and abs(RC_throttle_pwm - params.throttle_null_pwm) < 7:
+            
+        elif abs(RC_steer_pwm - params.steer_null_pwm) > params.calibration_epsilon and abs(RC_throttle_pwm - params.throttle_null_pwm) < params.calibration_epsilon:
             prompt = '4 - Calibration STEER: ' + str(RC_steer_pwm - params.steer_null_pwm) + '\tOK'
-        elif abs(RC_steer_pwm - params.steer_null_pwm) < 7 and abs(RC_throttle_pwm - params.throttle_null_pwm) > 7:
+            
+        elif abs(RC_steer_pwm - params.steer_null_pwm) < params.calibration_epsilon and abs(RC_throttle_pwm - params.throttle_null_pwm) > params.calibration_epsilon:
             prompt = '4 - Calibration \tOK' + '\tTHROTTLE: ' + str(RC_throttle_pwm - params.throttle_null_pwm)
+            
         else:
             prompt = '4 - Calibration STEER: ' + str(RC_steer_pwm - params.steer_null_pwm) + '\tTHROTTLE: ' + str(RC_throttle_pwm - params.throttle_null_pwm)
 
@@ -234,4 +240,22 @@ if __name__ == '__main__':
     try:
         ArduinoCar()
     except rospy.ROSInterruptException:
-        pass
+        print('ropsy interrupt exception')
+        print('exiting car node')
+
+    except KeyboardInterrupt:
+        print('shutdown requested...')
+        
+    except Exception as e:
+        print(e)
+        print('exiting car node')
+
+        
+    finally:
+        print('finally exiting...')
+        for i in range(10):
+            ArduinoCar.send_to_arduino(steer = params.steer_null_pwm, throttle = params.throttle_null_pwm)
+        ArduinoCar.arduino.close()
+        sys.exit(0)
+        
+
