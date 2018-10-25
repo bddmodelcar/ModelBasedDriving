@@ -29,7 +29,6 @@ Helpful Tips / Troubleshooting:
 TODO:
 
 1. Maybe update ZED firmware, but need help to do so.
-2. What conversion needs to be done on the image to use it in pytorch nn?
 3. Make sure the return data queue in new_driver doesn't become filled with old data. Maybe just create a new queue every time a NN is invoked
 4. Figure out how Karl's calibration works
 5. Change nn directory name to "backend" and make sure everything still runs
@@ -41,6 +40,7 @@ TODO:
 7. test car around. (Can use blue battery for computer)
 8. try out the screen program by sshing in, running program, disconnecting, reconnecting, and getting back to screen.
 9. Make new calibration mode, like karls.
+10. Add human accelerates mode and human steers mode
 
 
 99. Ask Sascha if code structure and naming conventions are intuitive for him

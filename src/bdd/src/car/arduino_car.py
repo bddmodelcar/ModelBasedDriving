@@ -7,6 +7,7 @@ import rospy
 import bdd.msg as BDDMsg
 from std_msgs.msg import Int32
 import sys
+from collections import deque
 
 
 
@@ -14,6 +15,13 @@ class ArduinoCar():
 
     arduino = None
     NN_data = None
+    steer_calibration = deque(maxlen = 10)
+    throttle_calibration = deque(maxlen = 10)
+    steer_running_avg = deque(maxlen = params.running_avg_len)
+    throttle_running_avg = deque(maxlen = params.running_avg_len)
+    steer_offset = 0
+    throttle_offset = 0
+
     state_pub = rospy.Publisher('state', Int32, queue_size=5)
     steer_used_pub = rospy.Publisher('steer_used', Int32, queue_size=5)
     throttle_used_pub = rospy.Publisher('throttle_used', Int32, queue_size=5)
@@ -38,9 +46,6 @@ class ArduinoCar():
  
 
         while not rospy.is_shutdown():
-        
-        
-
             if not cls.NN_data:
                 print('no NN data')
                 continue
@@ -52,7 +57,7 @@ class ArduinoCar():
 
             RC_button_pwm, RC_steer_pwm, RC_throttle_pwm = serial_data
             current_state = cls.convert_button_to_state(RC_button_pwm)
-
+            
             # Neural Network Execution
             if current_state == "state_one":
                 NN_steer_pwm = cls.convert_steer_to_pwm(cls.NN_data.steer)
@@ -64,6 +69,8 @@ class ArduinoCar():
             # Human annotation mode
             elif current_state == "state_two":
                 print('state_two -- human annotation')
+                RC_steer_pwm += cls.steer_offset # calibrated values
+                RC_throttle_pwm += cls.throttle_offset
                 cls.send_to_arduino(RC_steer_pwm, RC_throttle_pwm)
                 steer = cls.convert_pwm_to_NN_steer(RC_steer_pwm)
                 throttle = cls.convert_pwm_to_NN_throttle(RC_throttle_pwm)
@@ -72,6 +79,8 @@ class ArduinoCar():
             # Human correction mode (human control)
             elif current_state == "state_three":
                 print('state_three -- human control')
+                RC_steer_pwm += cls.steer_offset # calibrated values
+                RC_throttle_pwm += cls.throttle_offset
                 cls.send_to_arduino(RC_steer_pwm, RC_throttle_pwm)
                 steer = cls.convert_pwm_to_NN_steer(RC_steer_pwm)
                 throttle = cls.convert_pwm_to_NN_throttle(RC_throttle_pwm)
@@ -79,7 +88,9 @@ class ArduinoCar():
 
             # calibration
             elif current_state == "state_four":
-                cls.controller_calibration_prompt(RC_steer_pwm, RC_throttle_pwm)
+                print('state_four -- calibration')
+                cls.send_to_arduino(steer = params.steer_null_pwm, throttle = params.throttle_null_pwm)
+                cls.calibrate(RC_steer_pwm, RC_throttle_pwm)
                 cls.publish_data(4, None, None)
 
 
@@ -117,26 +128,24 @@ class ArduinoCar():
 
 
 
-    @classmethod
-    def convert_button_to_state(cls, button_pwm):
-        if abs(button_pwm - params.state_one_pwm) <= params.state_pwm_epsilon:
-            return "state_one"
-        elif abs(button_pwm - params.state_two_pwm) <= params.state_pwm_epsilon:
-            return "state_two"
-        elif abs(button_pwm - params.state_three_pwm) <= params.state_pwm_epsilon:
-            return "state_three"
-        elif abs(button_pwm - params.state_four_pwm) <= params.state_pwm_epsilon:
-            return "state_four"
-
-
-
-
     # sends pwm signals for steer and throttle. Arduino differentiates
     # steer/throttle signals by +10000 added to throttle pwm
     @classmethod
     def send_to_arduino(cls, steer, throttle):
+        cls.update_running_avg(steer, throttle)
+        steer = cls.deque_avg(cls.steer_running_avg)
+        throttle = cls.deque_avg(cls.throttle_running_avg)
+        throttle = cls.limit_speed(throttle)
         cls.arduino.write(str(steer) + "\n")
-        cls.arduino.write(str(throttle + 10000) + "\n")
+        cls.arduino.write(str(throttle + 10000) + "\n") # +10,000 for Arduino reasons 
+        
+        
+    
+    @classmethod
+    def update_running_avg(cls, steer_pwm, throttle_pwm):
+        cls.steer_running_avg.append(steer_pwm)
+        cls.throttle_running_avg.append(throttle_pwm)
+
 
 
 
@@ -147,8 +156,7 @@ class ArduinoCar():
         cls.throttle_used_pub.publish(throttle)
 
 
-
-
+    ''' ### UNUSED ###  
     @classmethod
     def controller_calibration_prompt(cls, RC_steer_pwm, RC_throttle_pwm):
         prompt = str()
@@ -166,8 +174,34 @@ class ArduinoCar():
 
 
         print(prompt)
+    
+    '''
+    
+    # running average of controller signals when untouched to get null steer/throttle commands
+    @clasmethod
+    def calibrate(cls, steer_pwm, throttle_pwm):  
+        cls.steer_calibration.append(steer_pwm)
+        cls.throttle_calibration.append(throttle_pwm)
+        steer_avg = cls.deque_avg(cls.steer_calibration)
+        throttle_avg = cls.deque_avg(cls.throttle_calibration)
+        cls.steer_offset = params.steer_null_pwm - steer_avg
+        cls.throttle_offset = params.throttle_null_pwm - throttle_avg
+        print(cls.steer_offset. cls.throttle_offset)
+        
 
 
+
+    @classmethod
+    def convert_button_to_state(cls, button_pwm):
+        if abs(button_pwm - params.state_one_pwm) <= params.state_pwm_epsilon:
+            return "state_one"
+        elif abs(button_pwm - params.state_two_pwm) <= params.state_pwm_epsilon:
+            return "state_two"
+        elif abs(button_pwm - params.state_three_pwm) <= params.state_pwm_epsilon:
+            return "state_three"
+        elif abs(button_pwm - params.state_four_pwm) <= params.state_pwm_epsilon:
+            return "state_four"
+            
 
 
 
@@ -233,7 +267,24 @@ class ArduinoCar():
 
 
 
-
+    @classmethod
+    def deque_avg(deque):
+        
+        if len(deque) >= deque.maxlen:
+            cls.steering_offset = sum(deque) / len(deque)
+        else:
+            return 0
+            
+    
+    @classmethod
+    def limit_speed(throttle_pwm):
+        if throttle_pwm > params.forward_speed_limit:
+            return params.forward_speed_limit
+        elif throttle_pwm < params.backward_speed_limit:
+            return params.backward_speed_limit
+        return throttle_pwm
+            
+            
 
 
 if __name__ == '__main__':
