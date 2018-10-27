@@ -1,6 +1,6 @@
 How to install ZED Camera Wrapper for ROS
 1. Download ZED SDK for TX1 (or TX2)
-2. Find downloaded .run file in Downloads folder and (if needed) make it executable using `chmod +x`
+2. Find the downloaded .run file in Downloads folder and make it executable using `chmod +x`
 3. Run it using `./ZED_SDK_LINUX_JTX1_JP...`
 4. Accept all installation options
 5. Follow other instruction for downloading and installing ZED ROS wrapper.
@@ -12,7 +12,7 @@ How to install ZED Camera Wrapper for ROS
 
 Mandatory:
 1. Add to `.bashrc` the following: `export PYTHONPATH=$PYTHONPATH:/usr/lib/python2.7/dist-packages` in order to run the ROS nodes
-2. In order to run nodes: make nodes executeable using `chmod +x <file_name>.py` and by adding this at the top of the .py file: `#!/usr/bin/env python`
+2. Nodes must be executable to work: make nodes executable using `chmod +x <file_name>.py` and by adding this at the top of the .py file: `#!/usr/bin/env python`
 
 
 
@@ -29,18 +29,13 @@ Helpful Tips / Troubleshooting:
 TODO:
 
 1. Maybe update ZED firmware, but need help to do so.
-3. Make sure the return data queue in new_driver doesn't become filled with old data. Maybe just create a new queue every time a NN is invoked
-4. Figure out how Karl's calibration works
-5. Change nn directory name to "backend" and make sure everything still runs
-6. Consider changing constants in Arduino code from "#define" to final ints.
-7. Add smoothing for throttle to arduino code, if approved. 
-
-
-6. Add smoothing options and speed limit option
-7. test car around. (Can use blue battery for computer)
-8. try out the screen program by sshing in, running program, disconnecting, reconnecting, and getting back to screen.
-9. Make new calibration mode, like karls.
-10. Add human accelerates mode and human steers mode
+2. Make sure the return data queue in new_driver doesn't become filled with old data. Maybe just create a new queue every time a NN is invoked
+3. Change nn directory name to "backend" and make sure everything still runs
+4. Consider changing constants in Arduino code from "#define" to final ints.
+5. test car around. (Can use blue battery for computer)
+6. try out the screen program by sshing in, running program, disconnecting, reconnecting, and getting back to screen.
+7. Add human accelerates mode and human steers mode
+8. Add rosbags
 
 
 99. Ask Sascha if code structure and naming conventions are intuitive for him

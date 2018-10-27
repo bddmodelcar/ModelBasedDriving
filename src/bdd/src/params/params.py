@@ -9,8 +9,8 @@ steer_null_pwm = 1450
 throttle_min_pwm = 1000 # Backward
 throttle_max_pwm = 2000 # Forward
 throttle_null_pwm = 1500
-backward_speed_limit = 1400 # For general safety. (arbitrary)
-forward_speed_limit = 1600 # For general safety. (arbitrary)
+backward_speed_limit = 1420 # For general safety. (arbitrary)
+forward_speed_limit = 1580 # For general safety. (arbitrary)
 
 baudrate = 115200 # used in serial connection to arduino
 timeout = 5 #used in serial connection to arduino

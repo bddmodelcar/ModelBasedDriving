@@ -30,7 +30,6 @@ class ArduinoCar():
         rospy.init_node('arduino_car')
         rospy.Subscriber('controls', BDDMsg.BDDControlsMsg, callback = ArduinoCar.update_data_callback)
         ArduinoCar.connect_to_arduino()
-
         ArduinoCar.run()
         
         
@@ -46,15 +45,17 @@ class ArduinoCar():
  
 
         while not rospy.is_shutdown():
-            if not cls.NN_data:
-                print('no NN data')
-                continue
-
+        
             serial_data = cls.get_serial_data()
             if not serial_data:
-                print('no serial data')
+                print('waiting for serial data...')
                 continue
-
+                
+            if not cls.NN_data:
+                print('waiting for NN data...')
+                time.sleep(1)
+                continue
+            
             RC_button_pwm, RC_steer_pwm, RC_throttle_pwm = serial_data
             current_state = cls.convert_button_to_state(RC_button_pwm)
             
@@ -71,6 +72,7 @@ class ArduinoCar():
                 print('state_two -- human annotation')
                 RC_steer_pwm += cls.steer_offset # calibrated values
                 RC_throttle_pwm += cls.throttle_offset
+                print("human sending", RC_steer_pwm, RC_throttle_pwm)
                 cls.send_to_arduino(RC_steer_pwm, RC_throttle_pwm)
                 steer = cls.convert_pwm_to_NN_steer(RC_steer_pwm)
                 throttle = cls.convert_pwm_to_NN_throttle(RC_throttle_pwm)
@@ -95,49 +97,27 @@ class ArduinoCar():
 
 
 
-    @classmethod
-    def connect_to_arduino(cls):
-        print("finding arduino")
-        cls.arduino = serial.Serial(params.arduino_path, params.baudrate, timeout = params.timeout)
-        time.sleep(5) # give arduino time to boot
-        print("found arduino")
-        #cls.send_to_arduino(steer = params.steer_min_pwm, throttle = params.throttle_null_pwm)
-        time.sleep(1)
-        print('1')
-        #cls.send_to_arduino(steer = params.steer_max_pwm, throttle = params.throttle_null_pwm)
-        time.sleep(1)
-        print('2')
-        cls.send_to_arduino(steer = params.steer_null_pwm, throttle = params.throttle_null_pwm)
-        return
-
-
-
-    @classmethod
-    def get_serial_data(cls):
-        line = cls.arduino.readline()
-
-        # expected line format: "mse, <button_pwm>, <steer_pwm>, <throttle_pwm>"
-        line = line.split(', ')
-        if "mse" == line[0]:
-            data = line[1:]
-            data = [int(x) for x in data] #convert each element to a number
-            return data
-        else:
-            return None
-
-
-
 
     # sends pwm signals for steer and throttle. Arduino differentiates
     # steer/throttle signals by +10000 added to throttle pwm
     @classmethod
     def send_to_arduino(cls, steer, throttle):
+        print('Commands:', steer, throttle)
         cls.update_running_avg(steer, throttle)
         steer = cls.deque_avg(cls.steer_running_avg)
         throttle = cls.deque_avg(cls.throttle_running_avg)
+        print('Commands:', steer, throttle)
         throttle = cls.limit_speed(throttle)
-        cls.arduino.write(str(steer) + "\n")
-        cls.arduino.write(str(throttle + 10000) + "\n") # +10,000 for Arduino reasons 
+        print('Commands:', steer, throttle)
+        
+        try:
+            cls.arduino.reset_input_buffer() # seems to makes write() work for some reason
+            cls.arduino.write(str(int(steer)) + "\n")
+            cls.arduino.write(str(int(throttle) + 10000) + "\n")
+        except serial.SerialTimeoutException:
+            print('serial write() timeout exception')
+            #cls.arduino.reset_input_buffer()
+
         
         
     
@@ -145,15 +125,35 @@ class ArduinoCar():
     def update_running_avg(cls, steer_pwm, throttle_pwm):
         cls.steer_running_avg.append(steer_pwm)
         cls.throttle_running_avg.append(throttle_pwm)
+        
+        
+        
+        
+    @classmethod
+    def connect_to_arduino(cls):
+        print("finding arduino")
+        cls.arduino = serial.Serial(params.arduino_path, params.baudrate, timeout = params.timeout, write_timeout = 0)
+        time.sleep(5) # give arduino time to boot
+        print("found arduino")
+
 
 
 
 
     @classmethod
-    def publish_data(cls, state_num, steer, throttle):
-        cls.state_pub.publish(state_num)
-        cls.steer_used_pub.publish(steer)
-        cls.throttle_used_pub.publish(throttle)
+    def get_serial_data(cls):
+        line = cls.arduino.readline()
+        # expected line format: "mse, <button_pwm>, <steer_pwm>, <throttle_pwm>"
+        line = line.split(', ')
+        if 'mse' == line[0]:
+            data = line[1:]
+            try:
+                data = [int(x) for x in data] #convert each element to a number
+                return data
+            except ValueError:
+                return None
+        else:
+            return None
 
 
     ''' ### UNUSED ###  
@@ -178,7 +178,7 @@ class ArduinoCar():
     '''
     
     # running average of controller signals when untouched to get null steer/throttle commands
-    @clasmethod
+    @classmethod
     def calibrate(cls, steer_pwm, throttle_pwm):  
         cls.steer_calibration.append(steer_pwm)
         cls.throttle_calibration.append(throttle_pwm)
@@ -186,7 +186,35 @@ class ArduinoCar():
         throttle_avg = cls.deque_avg(cls.throttle_calibration)
         cls.steer_offset = params.steer_null_pwm - steer_avg
         cls.throttle_offset = params.throttle_null_pwm - throttle_avg
-        print(cls.steer_offset. cls.throttle_offset)
+        print(cls.steer_offset, cls.throttle_offset)
+        
+        
+        
+        
+    @classmethod
+    def deque_avg(cls, deque):
+        #print(deque)
+        if len(deque) == 0:
+            return 0
+        return sum(deque) / len(deque)
+            
+    
+    @classmethod
+    def limit_speed(cls, throttle_pwm):
+        if throttle_pwm > params.forward_speed_limit:
+            return params.forward_speed_limit
+        elif throttle_pwm < params.backward_speed_limit:
+            return params.backward_speed_limit
+        return throttle_pwm
+        
+        
+
+
+    @classmethod
+    def publish_data(cls, state_num, steer, throttle):
+        cls.state_pub.publish(state_num)
+        cls.steer_used_pub.publish(steer)
+        cls.throttle_used_pub.publish(throttle)
         
 
 
@@ -264,25 +292,6 @@ class ArduinoCar():
 
         # convert 0-1 range into a value in the 'to range'
         return to_min + (value_scaled * to_span)
-
-
-
-    @classmethod
-    def deque_avg(deque):
-        
-        if len(deque) >= deque.maxlen:
-            cls.steering_offset = sum(deque) / len(deque)
-        else:
-            return 0
-            
-    
-    @classmethod
-    def limit_speed(throttle_pwm):
-        if throttle_pwm > params.forward_speed_limit:
-            return params.forward_speed_limit
-        elif throttle_pwm < params.backward_speed_limit:
-            return params.backward_speed_limit
-        return throttle_pwm
             
             
 
@@ -297,8 +306,12 @@ if __name__ == '__main__':
     except KeyboardInterrupt:
         print('shutdown requested...')
         
+        
+    # catch write time out exception and make program continue
+        
     except Exception as e:
-        print(e)
+        print('Exception', e)
+        print('Exception type', type(e))
         print('exiting car node')
 
         
@@ -306,6 +319,7 @@ if __name__ == '__main__':
         print('finally exiting...')
         for i in range(10):
             ArduinoCar.send_to_arduino(steer = params.steer_null_pwm, throttle = params.throttle_null_pwm)
+            ArduinoCar.arduino.flush()
         ArduinoCar.arduino.close()
         sys.exit(0)
         
