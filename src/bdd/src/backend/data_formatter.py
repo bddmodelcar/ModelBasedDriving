@@ -4,6 +4,19 @@ import torch
 from torch.autograd import Variable
 
 
+'''data_formatter.py
+This file is meant to be edited 
+by the user. Driver.py uses the
+functions in this file to format
+all input and output data so that
+it fits whatever model is used.
+
+Code which you may want to edit:
+- format_input_data()
+- format_output_data()
+
+'''
+
 class DataFormatter():
 
     num_frames = 10

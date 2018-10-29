@@ -21,7 +21,8 @@ state_three_pwm = 1432	# Human correction
 state_four_pwm = 872	# Calibration
 
 state_pwm_epsilon = 50	# Absolute value error (arbitrary) for pwm of a state
-calibration_epsilon = 7 ### Not Used. To be deleted. ###
+command_pwm_epsilon = 50# Abs. VE (arbitrary) for command pwm. (For detecting change from null)
+stay_in_state_time = 5	# amount of seconds to stay in NN+human modes before returning to NN mode
 running_avg_len = 10	# Smoothing prevents car from flipping over. Set to 1 for no smoothing.
 
 nn_min_output = 0	# nn outputs 0 for min pwm actions -- throttle: backwards, steering: right

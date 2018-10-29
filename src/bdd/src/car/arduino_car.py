@@ -9,7 +9,17 @@ from std_msgs.msg import Int32
 import sys
 from collections import deque
 
-
+''' arduino_car.py
+This file takes in commands from
+driver.py and, depending on the state,
+decides what commands to send to the 
+arduino car. Commands are give either
+by the neural network or by the human
+via the remote controller. A running average
+ensures that there are no sharp changes
+in the commands being sent to the car.
+Speed limiting is also implemented here.
+'''
 
 class ArduinoCar():
 
@@ -21,10 +31,13 @@ class ArduinoCar():
     throttle_running_avg = deque(maxlen = params.running_avg_len)
     steer_offset = 0
     throttle_offset = 0
-
+    
     state_pub = rospy.Publisher('state', Int32, queue_size=5)
     steer_used_pub = rospy.Publisher('steer_used', Int32, queue_size=5)
     throttle_used_pub = rospy.Publisher('throttle_used', Int32, queue_size=5)
+
+
+
 
     def __init__(self):
         rospy.init_node('arduino_car')
@@ -43,6 +56,8 @@ class ArduinoCar():
     @classmethod
     def run(cls):
  
+        prev_human_steer_time = 0
+        prev_human_throttle_time = 0
 
         while not rospy.is_shutdown():
         
@@ -55,45 +70,62 @@ class ArduinoCar():
                 print('waiting for NN data...')
                 time.sleep(1)
                 continue
-            
-            RC_button_pwm, RC_steer_pwm, RC_throttle_pwm = serial_data
+            print(serial_data)
+            RC_button_pwm, RC_steer_uncalib_pwm, RC_throttle_uncalib_pwm = serial_data
             current_state = cls.convert_button_to_state(RC_button_pwm)
+            RC_steer_pwm = RC_steer_uncalib_pwm + cls.steer_offset # true, calibrated values
+            RC_throttle_pwm = RC_throttle_uncalib_pwm + cls.throttle_offset # true, calibrated values
+            RC_steer_percent = cls.convert_pwm_to_percent_steer(RC_steer_pwm)
+            RC_throttle_percent = cls.convert_pwm_to_percent_throttle(RC_throttle_pwm)
             
             # Neural Network Execution
             if current_state == "state_one":
+            
                 NN_steer_pwm = cls.convert_steer_to_pwm(cls.NN_data.steer)
                 NN_throttle_pwm = cls.convert_throttle_to_pwm(cls.NN_data.throttle)
-                print('state_one -- Neural Network Execution', NN_steer_pwm, NN_throttle_pwm)
-                cls.send_to_arduino(NN_steer_pwm, NN_throttle_pwm)
-                cls.publish_data(1, cls.NN_data.steer, cls.NN_data.throttle)
+                    
+                # NN Steering + Human Throttle
+                if abs(RC_throttle_pwm - params.throttle_null_pwm) >= params.command_pwm_epsilon or time.time() - prev_human_throttle_time <= params.stay_in_state_time:
+                    print('state_9 -- NNE/Human Throttle', NN_steer_pwm, RC_throttle_pwm)
+                    if abs(RC_throttle_pwm - params.throttle_null_pwm) >= params.command_pwm_epsilon:
+                        prev_human_throttle_time = time.time() # throttle not neutral -- definitley still in this state
+                    cls.send_to_arduino(NN_steer_pwm, RC_throttle_pwm)    
+                    cls.publish_data(9, cls.NN_data.steer, RC_throttle_percent)
+
+                
+                # NN Throttle + Human Steering
+                elif abs(RC_steer_pwm - params.steer_null_pwm) >= params.command_pwm_epsilon or time.time() - prev_human_steer_time <= params.stay_in_state_time:
+                    print('state_6 -- NNE/Human Steering', RC_steer_pwm, NN_throttle_pwm)
+                    if abs(RC_steer_pwm - params.steer_null_pwm) >= params.command_pwm_epsilon:
+                        prev_human_steer_time = time.time() # steer not neutral -- definitley still in this state
+                    cls.send_to_arduino(RC_steer_pwm, NN_throttle_pwm)    
+                    cls.publish_data(6, RC_steer_percent, cls.NN_data.throttle)
+                
+                
+                # NN Steering + Throttle
+                else:
+                    print('state_one -- Neural Network Execution', NN_steer_pwm, NN_throttle_pwm)
+                    cls.send_to_arduino(NN_steer_pwm, NN_throttle_pwm)
+                    cls.publish_data(1, cls.NN_data.steer, cls.NN_data.throttle)
 
             # Human annotation mode
             elif current_state == "state_two":
                 print('state_two -- human annotation')
-                RC_steer_pwm += cls.steer_offset # calibrated values
-                RC_throttle_pwm += cls.throttle_offset
-                print("human sending", RC_steer_pwm, RC_throttle_pwm)
                 cls.send_to_arduino(RC_steer_pwm, RC_throttle_pwm)
-                steer = cls.convert_pwm_to_NN_steer(RC_steer_pwm)
-                throttle = cls.convert_pwm_to_NN_throttle(RC_throttle_pwm)
-                cls.publish_data(2, steer, throttle)
+                cls.publish_data(2, RC_steer_percent, RC_throttle_percent)
 
             # Human correction mode (human control)
             elif current_state == "state_three":
                 print('state_three -- human control')
-                RC_steer_pwm += cls.steer_offset # calibrated values
-                RC_throttle_pwm += cls.throttle_offset
                 cls.send_to_arduino(RC_steer_pwm, RC_throttle_pwm)
-                steer = cls.convert_pwm_to_NN_steer(RC_steer_pwm)
-                throttle = cls.convert_pwm_to_NN_throttle(RC_throttle_pwm)
-                cls.publish_data(3, steer, throttle)
+                cls.publish_data(3, RC_steer_percent, RC_throttle_percent)
 
             # calibration
             elif current_state == "state_four":
                 print('state_four -- calibration')
                 cls.send_to_arduino(steer = params.steer_null_pwm, throttle = params.throttle_null_pwm)
-                cls.calibrate(RC_steer_pwm, RC_throttle_pwm)
-                cls.publish_data(4, None, None)
+                cls.calibrate(RC_steer_uncalib_pwm, RC_throttle_uncalib_pwm)
+                cls.publish_data(4, 0, 0)
 
 
 
@@ -102,13 +134,10 @@ class ArduinoCar():
     # steer/throttle signals by +10000 added to throttle pwm
     @classmethod
     def send_to_arduino(cls, steer, throttle):
-        print('Commands:', steer, throttle)
         cls.update_running_avg(steer, throttle)
         steer = cls.deque_avg(cls.steer_running_avg)
         throttle = cls.deque_avg(cls.throttle_running_avg)
-        print('Commands:', steer, throttle)
         throttle = cls.limit_speed(throttle)
-        print('Commands:', steer, throttle)
         
         try:
             cls.arduino.reset_input_buffer() # seems to makes write() work for some reason
@@ -116,7 +145,6 @@ class ArduinoCar():
             cls.arduino.write(str(int(throttle) + 10000) + "\n")
         except serial.SerialTimeoutException:
             print('serial write() timeout exception')
-            #cls.arduino.reset_input_buffer()
 
         
         
@@ -144,38 +172,20 @@ class ArduinoCar():
     def get_serial_data(cls):
         line = cls.arduino.readline()
         # expected line format: "mse, <button_pwm>, <steer_pwm>, <throttle_pwm>"
-        line = line.split(', ')
-        if 'mse' == line[0]:
-            data = line[1:]
-            try:
+        try:
+            line = line.split(', ')
+            if 'mse' == line[0]:
+                data = line[1:4]
                 data = [int(x) for x in data] #convert each element to a number
                 return data
-            except ValueError:
+            else:
                 return None
-        else:
+        except ValueError:
+            print('error in get_serial_data')
             return None
 
 
-    ''' ### UNUSED ###  
-    @classmethod
-    def controller_calibration_prompt(cls, RC_steer_pwm, RC_throttle_pwm):
-        prompt = str()
-        if abs(RC_steer_pwm - params.steer_null_pwm) < params.calibration_epsilon and abs(RC_throttle_pwm - params.throttle_null_pwm) < params.calibration_epsilon:
-            prompt = '4 - Calibration \tOK\tOK'
-            
-        elif abs(RC_steer_pwm - params.steer_null_pwm) > params.calibration_epsilon and abs(RC_throttle_pwm - params.throttle_null_pwm) < params.calibration_epsilon:
-            prompt = '4 - Calibration STEER: ' + str(RC_steer_pwm - params.steer_null_pwm) + '\tOK'
-            
-        elif abs(RC_steer_pwm - params.steer_null_pwm) < params.calibration_epsilon and abs(RC_throttle_pwm - params.throttle_null_pwm) > params.calibration_epsilon:
-            prompt = '4 - Calibration \tOK' + '\tTHROTTLE: ' + str(RC_throttle_pwm - params.throttle_null_pwm)
-            
-        else:
-            prompt = '4 - Calibration STEER: ' + str(RC_steer_pwm - params.steer_null_pwm) + '\tTHROTTLE: ' + str(RC_throttle_pwm - params.throttle_null_pwm)
 
-
-        print(prompt)
-    
-    '''
     
     # running average of controller signals when untouched to get null steer/throttle commands
     @classmethod
@@ -193,7 +203,6 @@ class ArduinoCar():
         
     @classmethod
     def deque_avg(cls, deque):
-        #print(deque)
         if len(deque) == 0:
             return 0
         return sum(deque) / len(deque)
@@ -247,7 +256,7 @@ class ArduinoCar():
 
     # convert steer PWM into NN output percentage (0 - 99)
     @classmethod
-    def convert_pwm_to_NN_steer(cls, value):
+    def convert_pwm_to_percent_steer(cls, value):
         return cls.from_range_to_range(value,
                                        from_min = params.steer_min_pwm,
                                        from_max = params.steer_max_pwm,
@@ -271,7 +280,7 @@ class ArduinoCar():
 
     # convert throttle PWM into NN output percentage (0 - 99)
     @classmethod
-    def convert_pwm_to_NN_throttle(cls, value):
+    def convert_pwm_to_percent_throttle(cls, value):
         return cls.from_range_to_range(value,
                                        from_min = params.throttle_min_pwm,
                                        from_max = params.throttle_max_pwm,
@@ -301,25 +310,18 @@ if __name__ == '__main__':
         ArduinoCar()
     except rospy.ROSInterruptException:
         print('ropsy interrupt exception')
-        print('exiting car node')
 
     except KeyboardInterrupt:
         print('shutdown requested...')
-        
-        
-    # catch write time out exception and make program continue
-        
+
     except Exception as e:
         print('Exception', e)
         print('Exception type', type(e))
-        print('exiting car node')
 
-        
     finally:
-        print('finally exiting...')
+        print('exiting car node...')
         for i in range(10):
             ArduinoCar.send_to_arduino(steer = params.steer_null_pwm, throttle = params.throttle_null_pwm)
-            ArduinoCar.arduino.flush()
         ArduinoCar.arduino.close()
         sys.exit(0)
         

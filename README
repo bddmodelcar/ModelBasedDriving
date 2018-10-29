@@ -23,26 +23,3 @@ Helpful Tips / Troubleshooting:
 4. When connecting the flash drive used for storing log files, it mounts itself at /media/nvidia/rosbags
 5. Make sure correct path to Arduino is set in params file
 
-
-
-
-TODO:
-
-1. Maybe update ZED firmware, but need help to do so.
-2. Make sure the return data queue in new_driver doesn't become filled with old data. Maybe just create a new queue every time a NN is invoked
-3. Change nn directory name to "backend" and make sure everything still runs
-4. Consider changing constants in Arduino code from "#define" to final ints.
-5. test car around. (Can use blue battery for computer)
-6. try out the screen program by sshing in, running program, disconnecting, reconnecting, and getting back to screen.
-7. Add human accelerates mode and human steers mode
-8. Add rosbags
-
-
-99. Ask Sascha if code structure and naming conventions are intuitive for him
-
-97. Put correct file description comments at the beginning of each file
-98. Note: i've changed the permissions of /media/nvidia/rosbags to allow writing to it (for log files)
-99. Remove BDDDualImage message type if not needed
-
-
-
