@@ -1,4 +1,5 @@
 #### How to start program:
+1. Compile (if needed): `catkin_make`
 1. `source ./devel/setup.bash`
 2. `roslaunch bdd bdd.launch`
 
