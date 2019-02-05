@@ -10,13 +10,13 @@
     <node name="arduino_car" pkg="bdd" type="arduino_car.py" output="screen"/>
     
     <arg name="rosbag_topics" value=
-        "/bdd/state
-        /bdd/steer_used
-        /bdd/throttle_used
-        /zed/left/image_rect_color
-        /zed/right/image_rect_color" />
+            "/state
+            /steer_used
+            /throttle_used
+            /zed/left/image_rect_color
+            /zed/right/image_rect_color" />
     
-    <node pkg="rosbag" type="record" name="rosbag_record" args="record --split --size=1024 -b 2048 --lz4 -o /media/nvidia/rosbags/roslogs/roslogs $(arg rosbag_topics)" />
+    <node pkg="rosbag" type="record" name="rosbag_record" args="--split --size=1024 -b 2048 --lz4 -o /media/nvidia/rosbags/roslogs/roslogs $(arg rosbag_topics)" />
 
 
 </launch>

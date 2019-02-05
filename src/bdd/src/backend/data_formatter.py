@@ -35,7 +35,7 @@ class DataFormatter():
         
     @classmethod
     def enough_images_queued(cls):
-        return len(cls.left_imgs) == cls.num_frames and len(cls.right_imgs) == cls.num_frames
+        return len(cls.left_imgs) >= cls.num_frames and len(cls.right_imgs) >= cls.num_frames
         
         
         

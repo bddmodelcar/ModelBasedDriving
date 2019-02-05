@@ -63,7 +63,7 @@ class ArduinoCar():
         
             serial_data = cls.get_serial_data()
             if not serial_data:
-                print('waiting for serial data...')
+                print('waiting for serial data...is the remote turned on?')
                 continue
                 
             if not cls.NN_data:

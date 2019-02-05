@@ -28,6 +28,7 @@
 1. source devel/setup.bash
 2. ROS's built-in `sensor_msgs` package defines messages for commonly used sensors. The ZED camera uses `Image.msg` message type when publishing images. Its implementation can be found using `roscd sensor_msgs/msg`
 3. Settings for the ZED camera are found at zed.launch, and the launch file(s) it includes. Also be sure to read its READMEs which are at multiple places in its directory tree.
-4. When connecting the flash drive used for storing log files, it mounts itself at /media/nvidia/rosbags
+4. When connecting the flash drive used for storing log files, it mounts itself at `/media/nvidia/rosbags`
 5. Make sure correct path to Arduino is set in params file
+6. If `Driver.py` fails, check the RAM usage in System Monitor. You may be running out of RAM. Try closing some RAM-intensive applications such as Google Chrome.
 

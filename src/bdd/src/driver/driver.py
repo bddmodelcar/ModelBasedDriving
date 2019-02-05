@@ -75,13 +75,14 @@ class Driver():
         
             # if no NN process currerntly running, start a new NN process
             if not Driver.current_process.is_alive():
-
-		nn_output = Queue() # Queue used for getting return data: (steer, throttle)
+                nn_output = Queue() # Queue used for getting return data: (steer, throttle)
                 DataFormatter.format_input_data()
                 car_data = DataFormatter.get_input_data()
+
                 Driver.current_process = Thread(target = run_inference, args = (car_data, nn_output))
                 Driver.current_process.start()
                 Driver.current_process.join() # makes code below wait for nn_output. Doesn't block other funcs
+
                 try:
                     raw_output = nn_output.get(True)
                 except Empty:

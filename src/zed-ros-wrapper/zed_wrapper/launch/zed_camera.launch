@@ -102,18 +102,18 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
         <rosparam param="initial_tracking_pose" subst_value="True">$(arg initial_pose)</rosparam>
 
-        <!-- ROS topic names -->
+        <!-- ROS topic names --> <!--
         <param name="rgb_topic"                 value="$(arg rgb_topic)" />
         <param name="rgb_raw_topic"             value="rgb/image_raw_color" />
         <param name="rgb_cam_info_topic"        value="$(arg rgb_info_topic)" />
-        <param name="rgb_cam_info_raw_topic"    value="rgb/camera_info_raw" />
+        <param name="rgb_cam_info_raw_topic"    value="rgb/camera_info_raw" /> -->
 
-        <param name="left_topic"                value="left/image_rect_color" />
+        <param name="left_topic"                value="left/image_rect_color" /> <!--
         <param name="left_raw_topic"            value="left/image_raw_color" />
         <param name="left_cam_info_topic"       value="left/camera_info" />
-        <param name="left_cam_info_raw_topic"   value="left/camera_info_raw" />
+        <param name="left_cam_info_raw_topic"   value="left/camera_info_raw" /> -->
 
-        <param name="right_topic"               value="right/image_rect_color" />
+        <param name="right_topic"               value="right/image_rect_color" /> <!--
         <param name="right_raw_topic"           value="right/image_raw_color" />
         <param name="right_cam_info_topic"      value="right/camera_info" />
         <param name="right_cam_info_raw_topic"  value="right/camera_info_raw" />
@@ -128,7 +128,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
         <param name="confidence_map_topic"      value="confidence/confidence_map" />
 
         <param name="pose_topic"                value="map" />
-        <param name="odometry_topic"            value="odom" />
+        <param name="odometry_topic"            value="odom" /> -->
 
         <param name="init_odom_with_imu"        value="true" /> <!-- only used with ZED mini -->
 

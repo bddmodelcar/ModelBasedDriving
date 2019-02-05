@@ -14,7 +14,6 @@ solver = None
 def init_model():
 
     global solver
-
     directory_path = os.path.dirname(__file__)
     rel_path = 'Networks/net_for_nitzan/save/epoch00.weights'
     abs_path = os.path.join(directory_path, rel_path)
