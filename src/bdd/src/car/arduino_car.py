@@ -6,6 +6,7 @@ import time
 import rospy
 import bdd.msg as BDDMsg
 from std_msgs.msg import Int32
+from sensor_msgs.msg import Image
 import sys
 from collections import deque
 
@@ -31,20 +32,30 @@ class ArduinoCar():
     throttle_running_avg = deque(maxlen = params.running_avg_len)
     steer_offset = 0
     throttle_offset = 0
+    img_num = 0
     
-    state_pub = rospy.Publisher('state', Int32, queue_size=5)
-    steer_used_pub = rospy.Publisher('steer_used', Int32, queue_size=5)
-    throttle_used_pub = rospy.Publisher('throttle_used', Int32, queue_size=5)
+    #state_pub = rospy.Publisher('state', Int32, queue_size=5)
+    #steer_used_pub = rospy.Publisher('steer_used', Int32, queue_size=5)
+    #throttle_used_pub = rospy.Publisher('throttle_used', Int32, queue_size=5)
+    car_info_pub = rospy.Publisher('car_info', BDDMsg.CarInfoMsg, queue_size=5)
 
-
+    
 
 
     def __init__(self):
         rospy.init_node('arduino_car')
         rospy.Subscriber('controls', BDDMsg.BDDControlsMsg, callback = ArduinoCar.update_data_callback)
+        rospy.Subscriber('/zed/left/image_rect_color', Image, callback = ArduinoCar.left_image_callback)
         ArduinoCar.connect_to_arduino()
         ArduinoCar.run()
-        
+    
+    
+    # used for pairing each steer/throttle command to the image it belongs to
+    # left and right images use the same seq num so no need to get right img seq num too   
+    @classmethod
+    def left_image_callback(cls, data):
+        cls.img_num = data.header.seq
+        print(cls.img_num)
         
 
     @classmethod
@@ -139,12 +150,13 @@ class ArduinoCar():
         throttle = cls.deque_avg(cls.throttle_running_avg)
         throttle = cls.limit_speed(throttle)
         
-        try:
-            cls.arduino.reset_input_buffer() # seems to makes write() work for some reason
-            cls.arduino.write(str(int(steer)) + "\n")
-            cls.arduino.write(str(int(throttle) + 10000) + "\n")
-        except serial.SerialTimeoutException:
-            print('serial write() timeout exception')
+        if cls.arduino:
+            try:
+                cls.arduino.reset_input_buffer() # seems to makes write() work for some reason
+                cls.arduino.write(str(int(steer)) + "\n")
+                cls.arduino.write(str(int(throttle) + 10000) + "\n")
+            except serial.SerialTimeoutException:
+                print('serial write() timeout exception')
 
         
         
@@ -221,10 +233,11 @@ class ArduinoCar():
 
     @classmethod
     def publish_data(cls, state_num, steer, throttle):
-        cls.state_pub.publish(state_num)
-        cls.steer_used_pub.publish(steer)
-        cls.throttle_used_pub.publish(throttle)
-        
+        #cls.state_pub.publish(state_num)
+        #cls.steer_used_pub.publish(steer)
+        #cls.throttle_used_pub.publish(throttle)
+        cls.car_info_pub.publish(BDDMsg.CarInfoMsg(state=state_num, steer=steer, throttle=throttle, imgNum=cls.img_num))
+
 
 
 

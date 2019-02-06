@@ -10,9 +10,7 @@
     <node name="arduino_car" pkg="bdd" type="arduino_car.py" output="screen"/>
     
     <arg name="rosbag_topics" value=
-            "/state
-            /steer_used
-            /throttle_used
+            "/car_info
             /zed/left/image_rect_color
             /zed/right/image_rect_color" />
     
