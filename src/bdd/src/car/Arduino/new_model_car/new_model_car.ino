@@ -109,12 +109,15 @@ void loop() {
     if (serial_pwm_input >= SERVO_RIGHT_LIMIT && serial_pwm_input <= SERVO_LEFT_LIMIT) {
       servo_pwm = serial_pwm_input;
       servo_command_time = millis();
-    } 
+    }
+
+// add an if statement code that will make commands defined if input goes past the limits
 
     // throttle pwm + 10,000. To differentiate it from serial input servo PWM
     else if (serial_pwm_input >= 10000 && serial_pwm_input < 100000) {
       serial_pwm_input -= 10000;
       if (serial_pwm_input >= MOTOR_BACK_LIMIT && serial_pwm_input <= MOTOR_FWD_LIMIT) {
+// add an if statement code that will make commands defined if input goes past the limits
         motor_pwm = serial_pwm_input;
         motor_command_time = millis();
       }
@@ -181,6 +184,7 @@ void servo_interrupt_service_routine(void) {
   /*volatile*/ int received_pwm = micros() - servo_prev_interrupt_time;
   servo_prev_interrupt_time = micros(); 
   if (received_pwm >= SERVO_RIGHT_LIMIT && received_pwm <= SERVO_LEFT_LIMIT) {
+// add an if statement code that will make commands defined if input goes past the limits
     RC_servo_pwm = received_pwm;
   } 
 }
@@ -192,6 +196,7 @@ void motor_interrupt_service_routine(void) {
   /*volatile*/ int received_pwm = micros() - motor_prev_interrupt_time;
   motor_prev_interrupt_time = micros(); 
   if (received_pwm >= MOTOR_BACK_LIMIT && received_pwm <= MOTOR_FWD_LIMIT) {
+// add an if statement code that will make commands defined if input goes past the limits
     RC_motor_pwm = received_pwm;
   }
 }

@@ -43,6 +43,7 @@ class ArduinoCar():
 
 
     def __init__(self):
+	self.checks()
         rospy.init_node('arduino_car')
         rospy.Subscriber('controls', BDDMsg.BDDControlsMsg, callback = ArduinoCar.update_data_callback)
         rospy.Subscriber('/zed/left/image_rect_color', Image, callback = ArduinoCar.left_image_callback)
@@ -55,7 +56,7 @@ class ArduinoCar():
     @classmethod
     def left_image_callback(cls, data):
         cls.img_num = data.header.seq
-        print(cls.img_num)
+        #print(cls.img_num)
         
 
     @classmethod
@@ -121,13 +122,13 @@ class ArduinoCar():
 
             # Human annotation mode
             elif current_state == "state_two":
-                print('state_two -- human annotation')
+                print('state_two -- human annotation (data collection)')
                 cls.send_to_arduino(RC_steer_pwm, RC_throttle_pwm)
                 cls.publish_data(2, RC_steer_percent, RC_throttle_percent)
 
             # Human correction mode (human control)
             elif current_state == "state_three":
-                print('state_three -- human control')
+                print('state_three -- human control', 'Steer:', RC_steer_percent,'%  ', RC_steer_pwm)
                 cls.send_to_arduino(RC_steer_pwm, RC_throttle_pwm)
                 cls.publish_data(3, RC_steer_percent, RC_throttle_percent)
 
@@ -262,7 +263,7 @@ class ArduinoCar():
                                        from_min = params.nn_min_output,
                                        from_max = params.nn_max_output,
                                        to_min = params.steer_min_pwm,
-                                       to_max =params.steer_max_pwm)
+                                       to_max = params.steer_max_pwm)
 
 
 
@@ -274,7 +275,7 @@ class ArduinoCar():
                                        from_min = params.steer_min_pwm,
                                        from_max = params.steer_max_pwm,
                                        to_min = params.nn_min_output,
-                                       to_max =params.nn_max_output)
+                                       to_max = params.nn_max_output)
 
 
 
@@ -286,7 +287,7 @@ class ArduinoCar():
                                        from_min = params.nn_min_output,
                                        from_max = params.nn_max_output,
                                        to_min = params.throttle_min_pwm,
-                                       to_max =params.throttle_max_pwm)
+                                       to_max = params.throttle_max_pwm)
 
 
 
@@ -298,7 +299,7 @@ class ArduinoCar():
                                        from_min = params.throttle_min_pwm,
                                        from_max = params.throttle_max_pwm,
                                        to_min = params.nn_min_output,
-                                       to_max =params.nn_max_output)
+                                       to_max = params.nn_max_output)
 
 
 
@@ -314,7 +315,21 @@ class ArduinoCar():
 
         # convert 0-1 range into a value in the 'to range'
         return to_min + (value_scaled * to_span)
+
+
+
+    @classmethod
+    def checks(cls):
+
+        if abs( (params.steer_null_pwm - params.steer_min_pwm) - (params.steer_max_pwm - params.steer_null_pwm) ) > 1:
+            # if they're not equal, then calculating the % steer will be incorrect. E.g. driving straight will not count as
+            # 49.5% steering in the converting pwm to percent steer method.
+            raise ValueError('difference between straight and right turn should be equal to difference between straight and left turn')
             
+        if abs( (params.throttle_null_pwm - params.throttle_min_pwm) - (params.throttle_max_pwm - params.throttle_null_pwm) ) > 1:
+            # if they're not equal, then calculating the % throttle will be incorrect. E.g. Being stationary will not count as
+            # 49.5% throttle in the converting pwm to percent throttle method.
+            raise ValueError('difference between no throttle and full throttle should be equal to difference between no throttle and full backward throttle')
             
 
 
@@ -335,7 +350,8 @@ if __name__ == '__main__':
         print('exiting car node...')
         for i in range(10):
             ArduinoCar.send_to_arduino(steer = params.steer_null_pwm, throttle = params.throttle_null_pwm)
-        ArduinoCar.arduino.close()
+        if ArduinoCar.arduino:
+            ArduinoCar.arduino.close()
         sys.exit(0)
         
 
