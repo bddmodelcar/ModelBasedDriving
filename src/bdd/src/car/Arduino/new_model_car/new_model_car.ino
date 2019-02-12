@@ -1,6 +1,6 @@
 #define SERVO_RIGHT_LIMIT 1100
-#define SERVO_ZERO        1450
-#define SERVO_LEFT_LIMIT  1800
+#define SERVO_ZERO        1440
+#define SERVO_LEFT_LIMIT  1780
 
 #define MOTOR_BACK_LIMIT  1000 // Unkown, but shouldn't be lower to not appear as servo pwm in code below
 #define MOTOR_FWD_LIMIT   2000 // Unknown, could be higher, but as 2000 it makes MOTOR_ZERO be halfway to BACK_LIMIT
@@ -109,16 +109,25 @@ void loop() {
     if (serial_pwm_input >= SERVO_RIGHT_LIMIT && serial_pwm_input <= SERVO_LEFT_LIMIT) {
       servo_pwm = serial_pwm_input;
       servo_command_time = millis();
+    } else if (serial_pwm_input <= SERVO_RIGHT_LIMIT) {
+      servo_pwm = SERVO_RIGHT_LIMIT;
+      servo_command_time = millis();
+    } else if (serial_pwm_input >= SERVO_LEFT_LIMIT && serial_pwm_input < 10000) {
+      servo_pwm = SERVO_LEFT_LIMIT;
+      servo_command_time = millis();
     }
-
-// add an if statement code that will make commands defined if input goes past the limits
 
     // throttle pwm + 10,000. To differentiate it from serial input servo PWM
     else if (serial_pwm_input >= 10000 && serial_pwm_input < 100000) {
       serial_pwm_input -= 10000;
       if (serial_pwm_input >= MOTOR_BACK_LIMIT && serial_pwm_input <= MOTOR_FWD_LIMIT) {
-// add an if statement code that will make commands defined if input goes past the limits
         motor_pwm = serial_pwm_input;
+        motor_command_time = millis();
+      } else if (serial_pwm_input < MOTOR_BACK_LIMIT) {
+        motor_pwm = MOTOR_BACK_LIMIT;
+        motor_command_time = millis();
+      } else if (serial_pwm_input > MOTOR_FWD_LIMIT) {
+        motor_pwm = MOTOR_FWD_LIMIT;
         motor_command_time = millis();
       }
     }
@@ -182,11 +191,12 @@ void print_stats() {
 // the signal is low, rather than just how long it's on, since it detects changes
 void servo_interrupt_service_routine(void) {
   /*volatile*/ int received_pwm = micros() - servo_prev_interrupt_time;
-  servo_prev_interrupt_time = micros(); 
-  if (received_pwm >= SERVO_RIGHT_LIMIT && received_pwm <= SERVO_LEFT_LIMIT) {
-// add an if statement code that will make commands defined if input goes past the limits
+  servo_prev_interrupt_time = micros();
+  // padded limits by 1000 to gaurd against rouge values but still allow legroom for 
+  // trim knob to not be centered.
+  if (received_pwm >= (SERVO_RIGHT_LIMIT - 1000) && received_pwm <= (SERVO_LEFT_LIMIT + 1000)) {
     RC_servo_pwm = received_pwm;
-  } 
+  }
 }
 
 
@@ -195,8 +205,9 @@ void servo_interrupt_service_routine(void) {
 void motor_interrupt_service_routine(void) {
   /*volatile*/ int received_pwm = micros() - motor_prev_interrupt_time;
   motor_prev_interrupt_time = micros(); 
-  if (received_pwm >= MOTOR_BACK_LIMIT && received_pwm <= MOTOR_FWD_LIMIT) {
-// add an if statement code that will make commands defined if input goes past the limits
+  // padded limits by 1000 to gaurd against rouge values but still allow legroom for 
+  // trim knob to not be centered.
+  if (received_pwm >= (MOTOR_BACK_LIMIT - 1000) && received_pwm <= (MOTOR_FWD_LIMIT + 1000)) {
     RC_motor_pwm = received_pwm;
   }
 }

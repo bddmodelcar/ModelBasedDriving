@@ -11,12 +11,12 @@ import sys
 from collections import deque
 
 ''' arduino_car.py
-This file takes in commands from
-driver.py and, depending on the state,
-decides what commands to send to the 
-arduino car. Commands are give either
-by the neural network or by the human
-via the remote controller. A running average
+This file takes in commands from either
+the neural network (via driver.py) or by the human
+via the remote controller. Commands always come in from
+driver.py and the arduino and, depending on the state, 
+this code decides what commands to send to the 
+arduino car. A running average
 ensures that there are no sharp changes
 in the commands being sent to the car.
 Speed limiting is also implemented here.
@@ -82,13 +82,14 @@ class ArduinoCar():
                 print('waiting for NN data...')
                 time.sleep(1)
                 continue
-            print(serial_data)
+            #print(serial_data)
             RC_button_pwm, RC_steer_uncalib_pwm, RC_throttle_uncalib_pwm = serial_data
             current_state = cls.convert_button_to_state(RC_button_pwm)
-            RC_steer_pwm = RC_steer_uncalib_pwm + cls.steer_offset # true, calibrated values
-            RC_throttle_pwm = RC_throttle_uncalib_pwm + cls.throttle_offset # true, calibrated values
+            RC_steer_pwm = cls.tune_steer(RC_steer_uncalib_pwm) # returns true, calibrated values
+            RC_throttle_pwm = cls.tune_throttle(RC_throttle_uncalib_pwm) # returns true, calibrated values
             RC_steer_percent = cls.convert_pwm_to_percent_steer(RC_steer_pwm)
             RC_throttle_percent = cls.convert_pwm_to_percent_throttle(RC_throttle_pwm)
+            print(RC_steer_uncalib_pwm, RC_steer_pwm, cls.steer_offset) 
             
             # Neural Network Execution
             if current_state == "state_one":
@@ -120,15 +121,15 @@ class ArduinoCar():
                     cls.send_to_arduino(NN_steer_pwm, NN_throttle_pwm)
                     cls.publish_data(1, cls.NN_data.steer, cls.NN_data.throttle)
 
-            # Human annotation mode
+            # Human annotation mode (data collection)
             elif current_state == "state_two":
                 print('state_two -- human annotation (data collection)')
                 cls.send_to_arduino(RC_steer_pwm, RC_throttle_pwm)
                 cls.publish_data(2, RC_steer_percent, RC_throttle_percent)
 
-            # Human correction mode (human control)
+            # Human correction mode
             elif current_state == "state_three":
-                print('state_three -- human control', 'Steer:', RC_steer_percent,'%  ', RC_steer_pwm)
+                print('state_three -- human control', 'Steer:', int(RC_steer_percent),'%  ', RC_steer_pwm)
                 cls.send_to_arduino(RC_steer_pwm, RC_throttle_pwm)
                 cls.publish_data(3, RC_steer_percent, RC_throttle_percent)
 
@@ -209,16 +210,45 @@ class ArduinoCar():
         throttle_avg = cls.deque_avg(cls.throttle_calibration)
         cls.steer_offset = params.steer_null_pwm - steer_avg
         cls.throttle_offset = params.throttle_null_pwm - throttle_avg
-        print(cls.steer_offset, cls.throttle_offset)
+        print(cls.steer_offset, steer_pwm, cls.steer_calibration, steer_avg)
+        #print(cls.throttle_offset, steer_pwm, throttle_pwm)
         
-        
-        
+    
+    
+    
+    # returns true, calibrated value
+    @classmethod
+    def tune_steer(cls, uncalib_steer_pwm):
+        tuned_steer_pwm = uncalib_steer_pwm + cls.steer_offset
+        if tuned_steer_pwm  < (params.steer_min_pwm):
+            tuned_steer_pwm = params.steer_min_pwm
+        elif tuned_steer_pwm > (params.steer_max_pwm):
+            tuned_steer_pwm = params.steer_max_pwm
+        return tuned_steer_pwm
+    
+    
+    
+    
+    # returns true, calibrated value
+    @classmethod
+    def tune_throttle(cls, uncalib_throttle_pwm):
+        tuned_throttle_pwm = uncalib_throttle_pwm + cls.throttle_offset
+        if tuned_throttle_pwm  < (params.throttle_min_pwm):
+            tuned_throttle_pwm = params.throttle_min_pwm
+        elif tuned_throttle_pwm > (params.throttle_max_pwm):
+            tuned_throttle_pwm = params.throttle_max_pwm
+        return tuned_throttle_pwm
+
+
+
         
     @classmethod
     def deque_avg(cls, deque):
         if len(deque) == 0:
             return 0
         return sum(deque) / len(deque)
+            
+            
             
     
     @classmethod
