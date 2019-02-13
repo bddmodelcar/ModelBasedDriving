@@ -1,4 +1,4 @@
 int8 state
-int8 steer
-int8 throttle
+float32 steer
+float32 throttle
 uint32 imgNum

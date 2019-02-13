@@ -33,10 +33,6 @@ class ArduinoCar():
     steer_offset = 0
     throttle_offset = 0
     img_num = 0
-    
-    #state_pub = rospy.Publisher('state', Int32, queue_size=5)
-    #steer_used_pub = rospy.Publisher('steer_used', Int32, queue_size=5)
-    #throttle_used_pub = rospy.Publisher('throttle_used', Int32, queue_size=5)
     car_info_pub = rospy.Publisher('car_info', BDDMsg.CarInfoMsg, queue_size=5)
 
     
@@ -56,7 +52,7 @@ class ArduinoCar():
     @classmethod
     def left_image_callback(cls, data):
         cls.img_num = data.header.seq
-        #print(cls.img_num)
+
         
 
     @classmethod
@@ -82,6 +78,7 @@ class ArduinoCar():
                 print('waiting for NN data...')
                 time.sleep(1)
                 continue
+
             #print(serial_data)
             RC_button_pwm, RC_steer_uncalib_pwm, RC_throttle_uncalib_pwm = serial_data
             current_state = cls.convert_button_to_state(RC_button_pwm)
@@ -89,7 +86,6 @@ class ArduinoCar():
             RC_throttle_pwm = cls.tune_throttle(RC_throttle_uncalib_pwm) # returns true, calibrated values
             RC_steer_percent = cls.convert_pwm_to_percent_steer(RC_steer_pwm)
             RC_throttle_percent = cls.convert_pwm_to_percent_throttle(RC_throttle_pwm)
-            print(RC_steer_uncalib_pwm, RC_steer_pwm, cls.steer_offset) 
             
             # Neural Network Execution
             if current_state == "state_one":
@@ -129,7 +125,7 @@ class ArduinoCar():
 
             # Human correction mode
             elif current_state == "state_three":
-                print('state_three -- human control', 'Steer:', int(RC_steer_percent),'%  ', RC_steer_pwm)
+                print('state_three -- human control')
                 cls.send_to_arduino(RC_steer_pwm, RC_throttle_pwm)
                 cls.publish_data(3, RC_steer_percent, RC_throttle_percent)
 
@@ -210,8 +206,7 @@ class ArduinoCar():
         throttle_avg = cls.deque_avg(cls.throttle_calibration)
         cls.steer_offset = params.steer_null_pwm - steer_avg
         cls.throttle_offset = params.throttle_null_pwm - throttle_avg
-        print(cls.steer_offset, steer_pwm, cls.steer_calibration, steer_avg)
-        #print(cls.throttle_offset, steer_pwm, throttle_pwm)
+
         
     
     
@@ -264,9 +259,6 @@ class ArduinoCar():
 
     @classmethod
     def publish_data(cls, state_num, steer, throttle):
-        #cls.state_pub.publish(state_num)
-        #cls.steer_used_pub.publish(steer)
-        #cls.throttle_used_pub.publish(throttle)
         cls.car_info_pub.publish(BDDMsg.CarInfoMsg(state=state_num, steer=steer, throttle=throttle, imgNum=cls.img_num))
 
 
