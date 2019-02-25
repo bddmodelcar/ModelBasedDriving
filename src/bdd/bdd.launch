@@ -9,10 +9,14 @@
     <!-- launch car control inputs node -->
     <node name="arduino_car" pkg="bdd" type="arduino_car.py" output="screen"/>
     
+    <!-- launch audio recording -->
+    <include file="$(find audio_capture)/launch/capture.launch"/>
+    
     <arg name="rosbag_topics" value=
             "/car_info
             /zed/left/image_rect_color
-            /zed/right/image_rect_color" />
+            /zed/right/image_rect_color
+            /audio/audio" />
     
     <node pkg="rosbag" type="record" name="rosbag_record" args="--split --size=1024 -b 2048 --lz4 -o /media/nvidia/rosbags/roslogs/roslogs $(arg rosbag_topics)" />
 
