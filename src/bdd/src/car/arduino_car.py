@@ -7,6 +7,8 @@ import rospy
 import bdd.msg as BDDMsg
 from std_msgs.msg import Int32
 from sensor_msgs.msg import Image
+from audio_common_msgs.msg import AudioData
+from rospy.numpy_msg import numpy_msg
 import sys
 from collections import deque
 
@@ -33,16 +35,18 @@ class ArduinoCar():
     steer_offset = 0
     throttle_offset = 0
     img_num = 0
+    record_audio = True
+    curr_audio = None
     car_info_pub = rospy.Publisher('car_info', BDDMsg.CarInfoMsg, queue_size=5)
-
     
-
-
+    
     def __init__(self):
-	self.checks()
+        self.checks()
         rospy.init_node('arduino_car')
         rospy.Subscriber('controls', BDDMsg.BDDControlsMsg, callback = ArduinoCar.update_data_callback)
         rospy.Subscriber('/zed/left/image_rect_color', Image, callback = ArduinoCar.left_image_callback)
+        if self.record_audio:
+            rospy.Subscriber('/audio/audio', numpy_msg(AudioData), callback = ArduinoCar.audio_callback)
         ArduinoCar.connect_to_arduino()
         ArduinoCar.run()
     
@@ -58,7 +62,16 @@ class ArduinoCar():
     @classmethod
     def update_data_callback(cls, data):
         cls.NN_data = data
-
+        
+        
+    
+    @classmethod
+    def audio_callback(cls, data):
+        cls.curr_audio = data.data
+        #data.data
+        #help(data)
+        #print(type(cls.curr_audio))
+        
 
 
     @classmethod
@@ -259,7 +272,10 @@ class ArduinoCar():
 
     @classmethod
     def publish_data(cls, state_num, steer, throttle):
-        cls.car_info_pub.publish(BDDMsg.CarInfoMsg(state=state_num, steer=steer, throttle=throttle, imgNum=cls.img_num))
+        if cls.record_audio:
+            cls.car_info_pub.publish(BDDMsg.CarInfoMsg(state=state_num, steer=steer, throttle=throttle, imgNum=cls.img_num, audio=cls.curr_audio))
+        else:
+            cls.car_info_pub.publish(BDDMsg.CarInfoMsg(state=state_num, steer=steer, throttle=throttle, imgNum=cls.img_num))
 
 
 
